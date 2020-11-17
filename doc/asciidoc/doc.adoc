@@ -1,0 +1,39 @@
+= NFC Temperature Reading App
+
+== Version Info
+* minSdkVersion: 15
+* targetSdkVersion: 27
+* Java-Version: 8
+* SDK-Build-Tools-Version: 29.0.2
+* GraphView-Version: 4.2.2
+
+== application structure
+* *MainActivity* +
+The main activity contains the tab view to switch between the List and the Graph Fragment. Furthermore, it gives access to the menu, that triggers the TemperatureReadingActivity or the task to reset the data.
+If a new data point gets measured, it is added to both fragments immediately.
+
+** *ListFragment* +
+The list fragment lists all temperatures that have been measured. Additionally, it shows a timestamp for each measurement.
+** *GraphFragment* +
+The graph fragment plots all measured temperatures in a line graph. Therefore it uses the GraphView library. 
+* *TemperatureReadingActivity* +
+This activity reads the current temperature of the sensor. It uses the Ntag_I2C_Demo class that defines a specific subclass for this task.
+
+== memory access, data exchange & authentication
+=== temperature sensor
+If the tag has a connection to a NFC reader (i.e the phone), it powers the chip and the temperature sensor. The value of the sensor gets written into the SRAM-memory in real time. 
+
+=== temperature values
+Once a temperature has been read out of the SRAM, it gets written to the internal storage of the phone. (path: /data/data/com.ferit.temp_reader/temperatures/temperatures.json). Both fragments read out the data when they create their view.
+
+=== NDEF message
+The tag has a single ndef message with several records. Every record has one of the following ids:
+
+* ps: This record stores the hashed pass_id. (SHA256)
+* ct: This record stores the amount of temperature measurements
+* id: For every measurement exist a record with this id. It stores a unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement.
+
+=== authentication
+If the user chooses the authenticate option in the app menu or tries to read out the temperature for the first time, he will be asked to type in the chip password. +
+password: pass157 +
+The password gets hashed with the SHA256 algorithm. The related salt value needs to stay the same and is stored in the SHA256Encryptor class. Both hashes, the one of the typed password and the one in the EEPROM memory of the tag will get compared. If they are the same, the user is authenticated and can read the data from the tag during the app session.
