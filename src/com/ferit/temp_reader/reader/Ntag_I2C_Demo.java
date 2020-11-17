@@ -67,7 +67,7 @@ import com.ferit.temp_reader.listeners.WriteEEPROMListener;
 /**
  * Class for the different Demos.
  *
- * @author NXP67729
+ * @author NXP67729, Moritz Pflügner
  *
  */
 
@@ -76,40 +76,14 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	private I2C_Enabled_Commands reader;
 	private Activity main;
 	private Tag tag;
-
-	/**
-	 *
-	 * Taskreferences.
-	 *
-	 */
-	private WriteEmptyNdefTask emptyNdeftask;
-	private WriteDefaultNdefTask defaultNdeftask;
-	private TemperatureReadTask tTask;
-	private ResetTempTask rtask;
-	private GetPassIdTask passIdTask;
-
-	/**
-	 *
-	 * DEFINES.
-	 *
-	 */
-	private static final int LAST_FOUR_BYTES 	= 4;
-	private static final int DELAY_TIME 		= 100;
-	private static final int TRAILS 			= 300;
-	private static final int DATA_SEND_BYTE 	= 12;
-	private static final int VERSION_BYTE 		= 63;
-	private static final int GET_VERSION_NR 	= 12;
-	private static final int GET_FW_NR 			= 28;
-	private static final int THREE_BYTES 		= 3;
-	private static final int PAGE_SIZE 			= 4096;
+	private final String tagHash =  "17mwGzT5x67eUpxP+MBThJ/fIfN9lZkxpD7gwZQiCbc=";
+	private static final int DELAY_TIME = 100;
+	TemperatureReadTask tTask;
 
 	/**
 	 * Constructor.
-	 *
-	 * @param tag
-	 *            Tag with which the Demos should be performed
-	 * @param main
-	 *            MainActivity
+	 * @param tag Tag with which the Demos should be performed
+	 * @param main MainActivity
 	 */
 	public Ntag_I2C_Demo(Tag tag, final Activity main) {
 		try {
@@ -161,101 +135,6 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	}
 
 	/**
-	 * Checks if the tag is still connected based on the previously detected reader.
-	 *
-	 * @return Boolean indicating tag connection
-	 *
-	 */
-	public boolean isConnected() {
-		return reader.isConnected();
-	}
-
-	/**
-	 * Checks if the tag is still connected based on the tag.
-	 *
-	 * @return Boolean indicating tag presence
-	 *
-	 */
-	public static boolean isTagPresent(Tag tag) {
-		final Ndef ndef = Ndef.get(tag);
-		if (ndef != null && !ndef.getType().equals("android.ndef.unknown")) {
-			try {
-				ndef.connect();
-				final boolean isConnected = ndef.isConnected();
-				ndef.close();
-				return isConnected;
-			} catch (final IOException e) {
-				e.printStackTrace();
-				return false;
-			}
-		} else {
-			final NfcA nfca = NfcA.get(tag);
-			if (nfca != null) {
-				try {
-					nfca.connect();
-					final boolean isConnected = nfca.isConnected();
-					nfca.close();
-
-					return isConnected;
-				} catch (final IOException e) {
-					e.printStackTrace();
-					return false;
-				}
-			} else {
-				final NfcB nfcb = NfcB.get(tag);
-				if (nfcb != null) {
-					try {
-						nfcb.connect();
-						final boolean isConnected = nfcb.isConnected();
-						nfcb.close();
-						return isConnected;
-					} catch (final IOException e) {
-						e.printStackTrace();
-						return false;
-					}
-				} else {
-					final NfcF nfcf = NfcF.get(tag);
-					if (nfcf != null) {
-						try {
-							nfcf.connect();
-							final boolean isConnected = nfcf.isConnected();
-							nfcf.close();
-							return isConnected;
-						} catch (final IOException e) {
-							e.printStackTrace();
-							return false;
-						}
-					} else {
-						final NfcV nfcv = NfcV.get(tag);
-						if (nfcv != null) {
-							try {
-								nfcv.connect();
-								final boolean isConnected = nfcv.isConnected();
-								nfcv.close();
-								return isConnected;
-							} catch (final IOException e) {
-								e.printStackTrace();
-								return false;
-							}
-						} else {
-							return false;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	/**
-	 *
-	 * Finish all tasks.
-	 *
-	 */
-	public void finishAllTasks() {
-		WriteEmptyNdefFinish();
-	}
-
-	/**
 	 * Checks if the demo is ready to be executed.
 	 *
 	 * @return Boolean indicating demo readiness
@@ -289,10 +168,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	private class TemperatureReadTask extends AsyncTask<Void, Byte[], Void> {
 
 		private Boolean exit = false;
-		private final byte deviceToTag = 1;
-		private final byte tagToDevice = 2;
 		private final byte noTransfer = 0;
-		private final byte invalidTransfer = 4;
 
 		@Override
 		protected Void doInBackground(Void... params) {
@@ -434,12 +310,14 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 
 				// if Temp is 0 no Temp sensor is on the µC
 				if (temp != 0) {
-					DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy - HH:mm:ss");
-					String date = dateFormat.format(new Date());
+					Date date = new Date();
+					DateFormat dateFormatForView = new SimpleDateFormat("dd.MM.yyyy - HH:mm:ss");
+					DateFormat dateFormatForEEPROM = new SimpleDateFormat("ddMMyyyyHHmmss");
+					String dateView = dateFormatForView.format(date);
+					String dateTag = dateFormatForEEPROM.format(date);
 					try {
 						increaseCountRecord();
-						writeNewIdRecord(date);
-						//createNdefMessage("17mwGzT5x67eUpxP+MBThJ/fIfN9lZkxpD7gwZQiCbc=");
+						writeNewIdRecord(dateTag);
 					} catch (IOException e) {
 						e.printStackTrace();
 					} catch (CommandNotSupportedException e) {
@@ -448,7 +326,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 						e.printStackTrace();
 					}
 					// Set the values on the screen
-					ListFragment.addTempToList(calcTempCelsius(temp) + "°C" + " | " + date);
+					ListFragment.addTempToList(calcTempCelsius(temp) + "°C" + " | " + dateView);
 					GraphFragment.addTempToGraph(calcTempCelsius(temp));
 				} else {
 					ListFragment.setTemperatureC(0);
@@ -486,99 +364,13 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 				payloadAsNumber = payloadAsNumber + 1;
 				NdefRecord countRecUpdated = getNdefTextRecord(String.valueOf(payloadAsNumber), "ct");
 				records[i] = countRecUpdated;
+				break;
 			}
 		}
 		NdefMessage updatedMessage = new NdefMessage(records);
 		reader.writeNDEF(updatedMessage, this);
 	}
 
-	/**
-	 * Write empty ndef task.
-	 */
-	private class WriteEmptyNdefTask extends AsyncTask<Void, Void, Void> {
-
-		@SuppressWarnings("unused")
-		private Boolean exit = false;
-
-		@Override
-		protected Void doInBackground(Void... params) {
-			try {
-				reader.writeEmptyNdef();
-			} catch (Exception e) {
-				e.printStackTrace();
-				cancel(true);
-				return null;
-			}
-			return null;
-		}
-	}
-
-	/**
-	 * Write empty ndef finish.
-	 */
-	public void WriteEmptyNdefFinish() {
-		if (emptyNdeftask != null && !emptyNdeftask.isCancelled()) {
-			emptyNdeftask.exit = true;
-			try {
-				emptyNdeftask.get();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			emptyNdeftask = null;
-		}
-	}
-
-	/**
-	 * Write default ndef task.
-	 */
-	private class WriteDefaultNdefTask extends AsyncTask<Void, Void, Void> {
-
-		@SuppressWarnings("unused")
-		private Boolean exit = false;
-
-		@Override
-		protected Void doInBackground(Void... params) {
-			try {
-				reader.writeDefaultNdef();
-			} catch (Exception e) {
-				e.printStackTrace();
-				cancel(true);
-				return null;
-			}
-			return null;
-		}
-	}
-
-	@SuppressWarnings("unused")
-	private NdefMessage creatNdefDefaultMessage()
-			throws UnsupportedEncodingException {
-		NdefRecord uri_record = NdefRecord
-				.createUri("http://www.nxp.com/products/identification_and_security/"
-						+ "smart_label_and_tag_ics/ntag/series/NT3H1101_NT3H1201.html");
-		String text = "NTAG I2C Demoboard LPC812";
-		String lang = "en";
-		byte[] textBytes = text.getBytes();
-		byte[] langBytes = lang.getBytes("US-ASCII");
-		int langLength = langBytes.length;
-		int textLength = textBytes.length;
-		byte[] payload = new byte[1 + langLength + textLength];
-		payload[0] = (byte) langLength;
-		System.arraycopy(langBytes, 0, payload, 1, langLength);
-		System.arraycopy(textBytes, 0, payload, 1 + langLength, textLength);
-		NdefRecord textRecord = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
-				NdefRecord.RTD_TEXT, new byte[0], payload);
-		NdefRecord[] spRecords = { uri_record, textRecord };
-		NdefMessage spMessage = new NdefMessage(spRecords);
-		NdefRecord sp_record = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
-				NdefRecord.RTD_SMART_POSTER, new byte[0],
-				spMessage.toByteArray());
-		NdefRecord aap_record = NdefRecord.createApplicationRecord(main
-				.getPackageName());
-		NdefRecord[] records = { sp_record, aap_record };
-		NdefMessage message = new NdefMessage(records);
-		return message;
-
-	}
 	/**
 	 * Calculates the Temperature in Celsius.
 	 * 
@@ -637,8 +429,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		}
 	}
 
-	public void resetTemp() throws UnsupportedEncodingException,
-			IOException, FormatException {
+	public void resetTemp() {
 		ResetTempTask resetTempTask = new ResetTempTask(this);
 		resetTempTask.execute();
 	}
@@ -651,31 +442,10 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 			this.listener = ntag_i2C_demo;
 		}
 
-		@RequiresApi(api = Build.VERSION_CODES.O)
-		@Override
-		protected void onPreExecute() {
-			try {
-				NdefMessage currentMessage = reader.readNDEF();
-				NdefRecord[] records = currentMessage.getRecords();
-				NdefRecord[] resettedRecords = new NdefRecord[3];
-				System.arraycopy(records,0,resettedRecords,0,2);
-				NdefRecord updatedRecord = getNdefTextRecord("0", "ct");
-				resettedRecords[2] = updatedRecord;
-				updatedMessage = new NdefMessage(resettedRecords);
-			} catch (FormatException e) {
-				e.printStackTrace();
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (CommandNotSupportedException e) {
-				e.printStackTrace();
-			}
-		}
-
 		@Override
 		protected NdefMessage doInBackground(Void... voids) {
 			try {
+				updatedMessage = createDefaultNdefMessage();
 				reader.writeNDEF(updatedMessage, listener);
 				return updatedMessage;
 			} catch (IOException e) {
@@ -690,18 +460,15 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	}
 
 	/**
-	 * Creates a NDEF Message
-	 *
-	 * @param text
-	 *            Text to write
+	 * Creates the default NDEF Message
 	 * @return NDEF Message
 	 * @throws UnsupportedEncodingException
 	 */
-	private NdefMessage createNdefMessage(String text)
-			throws IOException, CommandNotSupportedException, FormatException {
+	private NdefMessage createDefaultNdefMessage()
+			throws IOException {
 		String passId = "ps";
 		String countId = "ct";
-		byte[] textBytes = text.getBytes();
+		byte[] textBytes = tagHash.getBytes();
 		int textLength = textBytes.length;
 		byte[] payload = new byte[1 + textLength];
 		System.arraycopy(textBytes, 0, payload, 1, textLength);
@@ -711,11 +478,16 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		NdefRecord countRec = getNdefTextRecord("0",countId);
 		NdefRecord[] records = { pass,aar,countRec };
 		NdefMessage message = new NdefMessage(records);
-		//reader.writeNDEF(message,this);
 		return message;
 	}
 
-	private NdefRecord getNdefTextRecord(String payloadString, String id) throws UnsupportedEncodingException {
+	/**
+	 * Creates a NDEF Text-Record with id and payload.
+	 * @param payloadString The string of the NDEF Text message.
+	 * @param id The id of the record.
+	 * @return NDEF Message
+	 */
+	private NdefRecord getNdefTextRecord(String payloadString, String id) {
 		byte[] payloadBytes = payloadString.getBytes();
 		int textLength = payloadBytes.length;
 		byte[] payload = new byte[1 + textLength];

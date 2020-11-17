@@ -76,8 +76,6 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 	private static MenuItem authItem;
 	private static AuthStatus authStatus;
 	public static String PACKAGE_NAME;
-	private static String hashedPassUserInput;
-	private static String hashedTagPass;
 
 	private static Intent mIntent;
 
@@ -175,10 +173,6 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		super.onPause();
 		if (mAdapter != null) {
 			mAdapter.disableForegroundDispatch(this);
-		}
-				
-		if (demo.isReady()) {
-			demo.finishAllTasks();
 		}
 	}
 

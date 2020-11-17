@@ -61,8 +61,10 @@ public class GraphFragment extends Fragment {
             e.printStackTrace();
         }
         graph = (GraphView) v.findViewById(R.id.graph);
-        series = new LineGraphSeries<>(convertToDataPointArray());
-        graph.addSeries(series);
+        if(this.measuredTemperatures.size() > 0){
+            series = new LineGraphSeries<>(convertToDataPointArray());
+            graph.addSeries(series);
+        }
         graph.getViewport().setScalable(true);
         graph.getGridLabelRenderer().setVerticalAxisTitle("temperature");
         graph.getGridLabelRenderer().setHorizontalAxisTitle("measurements");
@@ -97,6 +99,8 @@ public class GraphFragment extends Fragment {
             graph.addSeries(series);
         }
         else{
+            graph.getViewport().setMaxX(measuredTemperatures.size());
+            graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
             series.appendData(convertToDataPoint(tempAsNumber), false, measuredTemperatures.size());
         }
         graph.onDataChanged(false,true);
@@ -105,6 +109,7 @@ public class GraphFragment extends Fragment {
     public static void resetTemperatures(){
         graph.removeAllSeries();
         measuredTemperatures = new LinkedList<Double>();
+        graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
         graph.getViewport().setMaxX(measuredTemperatures.size());
         graph.onDataChanged(true, true);
     }
