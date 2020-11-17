@@ -65,7 +65,6 @@ import com.ferit.temp_reader.R;
 import com.ferit.temp_reader.util.AuthStatus;
 
 public class MainActivity extends FragmentActivity implements AuthDialogFragment.NoticeDialogListener {
-	public final static String EXTRA_MESSAGE = "com.nxp.nfc_demo.MESSAGE";
 	public final static int AUTH_REQUEST = 0;
 	public static Ntag_I2C_Demo demo;
 	private TabHost mTabHost;
@@ -303,7 +302,6 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		intent.putExtra("userpw", userPassword);
 		if(MainActivity.getmIntent() != null)
 			intent.putExtras(MainActivity.getmIntent());
-
 		if(intent != null){
 			startActivity(intent);
 		}

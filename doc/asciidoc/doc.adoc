@@ -31,7 +31,7 @@ The tag has a single ndef message with several records. Every record has one of 
 
 * ps: This record stores the hashed pass_id. (SHA256)
 * ct: This record stores the amount of temperature measurements
-* id: For every measurement exist a record with this id. It stores a unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement.
+* id: Every measurement has a record with this id. It stores a unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement.
 
 === authentication
 If the user chooses the authenticate option in the app menu or tries to read out the temperature for the first time, he will be asked to type in the chip password. +

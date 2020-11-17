@@ -28,7 +28,9 @@
 package com.ferit.temp_reader.fragments;
 
 
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -38,15 +40,23 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.ferit.temp_reader.R;
+import com.ferit.temp_reader.types.Temperature;
 
-import java.io.BufferedReader;
+import org.json.JSONException;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -56,7 +66,7 @@ public class ListFragment extends Fragment {
     private static double temperatureF;
     private static TextView tempCallback;
     private static String option;
-    private static List<String> measuredTemperatures;
+    private static List<Temperature> measuredTemperatures;
     private static ListView mListView;
     private static ArrayAdapter<String> adapter;
     private static String filesDir;
@@ -66,10 +76,11 @@ public class ListFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         option = "L2";
-        measuredTemperatures = new LinkedList<String>();
+        measuredTemperatures = new LinkedList<Temperature>();
         filesDir = getActivity().getFilesDir().toString();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_list, container, false);
@@ -78,41 +89,64 @@ public class ListFragment extends Fragment {
         adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, this.measuredTemperatures);
         mListView.setAdapter(adapter);
         try {
-            InputStream is = new FileInputStream( "/data/data/com.ferit.temp_reader/files/temperatures/temperatures.txt");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            if(is != null){
-                while (reader.ready()){
-                    this.measuredTemperatures.add(reader.readLine());
-                }
-                if(!this.measuredTemperatures.isEmpty()){
-                    this.tempCallback.setText("measured temperatures: ");
-                }
-                adapter.notifyDataSetChanged();
-            }
-            is.close();
-        } catch (
-                FileNotFoundException e) {
             File dir = new File(filesDir, "temperatures");
             if(!dir.exists()){
                 dir.mkdir();
             }
-        } catch (
-                IOException e) {
+            File file = new File(filesDir + "/temperatures/temperatures.json");
+            file.createNewFile();
+            JSONArray array = getTempsFromFile();
+            for(int i = 0; i < array.size(); i++){
+                JSONObject jsonObj = (JSONObject) array.get(i);
+                String timestamp = (String) jsonObj.get("timestamp");
+                String tempValue = (String) jsonObj.get("tempValue");
+                Temperature temperature = new Temperature(timestamp, tempValue);
+                System.out.println(temperature);
+                measuredTemperatures.add(temperature);
+            }
+            adapter.notifyDataSetChanged();
+        } catch (ParseException | IOException e) {
             e.printStackTrace();
         }
         return v;
     }
 
-    public static void writeFileOnInternalStorage(String newTemperature){
-        File dir = new File(filesDir, "temperatures");
-        try {
-            File file = new File(dir, "temperatures.txt");
-            FileWriter writer = new FileWriter(file, true);
-            writer.append(newTemperature + "\n");
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public static void writeFileOnInternalStorage(Temperature newTemperature) throws JSONException, ParseException {
+        JSONObject newTempJsonObject = new JSONObject();
+        newTempJsonObject.put("timestamp", newTemperature.getTimestamp());
+        newTempJsonObject.put("tempValue", newTemperature.getTemperatureValue());
+        JSONArray existingTemps = getTempsFromFile();
+        if(existingTemps == null){
+            existingTemps = new JSONArray();
+        }
+        existingTemps.add(newTempJsonObject);
+        try{
+            FileWriter writer = new FileWriter("/data/data/com.ferit.temp_reader/files/temperatures/temperatures.json");
+            writer.write(existingTemps.toJSONString());
+            writer.flush();
             writer.close();
         } catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public static JSONArray getTempsFromFile() throws ParseException {
+        File file = new File("/data/data/com.ferit.temp_reader/files/temperatures/temperatures.json");
+        if(file.length() == 0){
+            return new JSONArray();
+        }
+        JSONParser parser = new JSONParser();
+        try {
+            FileReader reader = new FileReader(file);
+            JSONArray array = (JSONArray) parser.parse(reader);
+            reader.close();
+            return array;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new JSONArray();
     }
 
     public static double getTemperatureC() {
@@ -131,18 +165,19 @@ public class ListFragment extends Fragment {
     public static String getOption() {
         return option;
     }
-    public static void addTempToList(String temp) {
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public static void addTempToList(Temperature temp) throws JSONException, ParseException {
         tempCallback.setText("measured temperatures: ");
+        writeFileOnInternalStorage(temp);
         measuredTemperatures.add(temp);
         adapter.notifyDataSetChanged();
-        writeFileOnInternalStorage(temp);
     }
 
     public static void resetTemperatures(){
         measuredTemperatures.removeAll(measuredTemperatures);
         File dir = new File(filesDir, "temperatures");
         try {
-            File gpxfile = new File(dir, "temperatures.txt");
+            File gpxfile = new File(dir, "temperatures.json");
             FileWriter writer = new FileWriter(gpxfile);
             writer.flush();
             writer.close();

@@ -1,6 +1,8 @@
 package com.ferit.temp_reader.fragments;
 
+import android.os.Build;
 import android.provider.ContactsContract;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -14,6 +16,10 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.DataPointInterface;
 import com.jjoe64.graphview.series.LineGraphSeries;
 import com.ferit.temp_reader.R;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -39,25 +45,19 @@ public class GraphFragment extends Fragment {
         setRetainInstance(true);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_graph, container, false);
         try {
-            InputStream is = new FileInputStream("/data/data/com.ferit.temp_reader/files/temperatures/temperatures.txt");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            if(is != null){
-                while (reader.ready()){
-                    String tempWithoutTimestamp = reader.readLine().split("°")[0];
-                    String tempStringWithDot = tempWithoutTimestamp.replace(",",".");
-                    Double tempAsNumber = Double.parseDouble(tempStringWithDot);
-                    this.measuredTemperatures.add(tempAsNumber);
-                };
+            JSONArray temps = ListFragment.getTempsFromFile();
+            for(int i = 0; i < temps.size(); i++){
+                JSONObject jsonObject = (JSONObject) temps.get(i);
+                String tempAsString = (String) jsonObject.get("tempValue");
+                String tempStringWithDot = tempAsString.replace(",",".");
+                this.measuredTemperatures.add(Double.parseDouble(tempStringWithDot));
             }
-            is.close();
-        } catch (
-                FileNotFoundException e) {
-        } catch (
-                IOException e) {
+        } catch (ParseException e) {
             e.printStackTrace();
         }
         graph = (GraphView) v.findViewById(R.id.graph);

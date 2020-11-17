@@ -62,6 +62,10 @@ import com.ferit.temp_reader.exceptions.CommandNotSupportedException;
 import com.ferit.temp_reader.fragments.GraphFragment;
 import com.ferit.temp_reader.fragments.ListFragment;
 import com.ferit.temp_reader.listeners.WriteEEPROMListener;
+import com.ferit.temp_reader.types.Temperature;
+
+import org.json.JSONException;
+import org.json.simple.parser.ParseException;
 
 
 /**
@@ -289,6 +293,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 			return null;
 		}
 
+		@RequiresApi(api = Build.VERSION_CODES.KITKAT)
 		@Override
 		protected void onProgressUpdate(Byte[]... bytes) {
 			if (bytes[0][0] == noTransfer) {
@@ -326,8 +331,16 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 						e.printStackTrace();
 					}
 					// Set the values on the screen
-					ListFragment.addTempToList(calcTempCelsius(temp) + "°C" + " | " + dateView);
-					GraphFragment.addTempToGraph(calcTempCelsius(temp));
+					String tempValue = calcTempCelsius(temp);
+					String timestamp = dateView;
+					try {
+						ListFragment.addTempToList(new Temperature(timestamp, tempValue));
+					} catch (JSONException e) {
+						e.printStackTrace();
+					} catch (ParseException e) {
+						e.printStackTrace();
+					}
+					GraphFragment.addTempToGraph(tempValue);
 				} else {
 					ListFragment.setTemperatureC(0);
 					ListFragment.setTempCallback("no temperature measured");
