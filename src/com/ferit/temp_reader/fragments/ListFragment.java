@@ -101,10 +101,12 @@ public class ListFragment extends Fragment {
                 String timestamp = (String) jsonObj.get("timestamp");
                 String tempValue = (String) jsonObj.get("tempValue");
                 Temperature temperature = new Temperature(timestamp, tempValue);
-                System.out.println(temperature);
                 measuredTemperatures.add(temperature);
             }
             adapter.notifyDataSetChanged();
+            if(!measuredTemperatures.isEmpty()){
+                tempCallback.setText("measured temperatures: ");
+            }
         } catch (ParseException | IOException e) {
             e.printStackTrace();
         }
