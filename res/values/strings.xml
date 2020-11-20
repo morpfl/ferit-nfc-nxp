@@ -251,6 +251,9 @@
     <string name="Dialog_enable_auth_msg"> Are you sure to enable protection?</string>
     <string name="read_temp_value">New temperature</string>
     <string name="reset_temperature">Reset temperatures and memory</string>
+    <string name="load_existing_data">Load existing data</string>
+    <string name="start_series">Start</string>
+    <string name="stop_series">Stop</string>
 
     <string-array name="ResetType_Options">
         <item>@string/ResetType_RF</item>

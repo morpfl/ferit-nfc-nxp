@@ -83,6 +83,7 @@ public class ListFragment extends Fragment {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        this.measuredTemperatures = new LinkedList<Temperature>();
         View v = inflater.inflate(R.layout.fragment_list, container, false);
         tempCallback = (TextView) v.findViewById(R.id.tempCallback);
         mListView = (ListView) v.findViewById(R.id.list);

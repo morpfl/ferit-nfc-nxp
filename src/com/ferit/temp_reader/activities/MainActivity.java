@@ -27,6 +27,7 @@
 */
 package com.ferit.temp_reader.activities;
 
+import java.io.IOException;
 import java.net.NetworkInterface;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
@@ -37,7 +38,10 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.nfc.Tag;
+import android.nfc.tech.Ndef;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.DialogFragment;
 import android.app.PendingIntent;
@@ -50,6 +54,7 @@ import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TabHost;
@@ -60,6 +65,7 @@ import com.ferit.temp_reader.crypto.SHA256Encryptor;
 import com.ferit.temp_reader.fragments.AuthDialogFragment;
 import com.ferit.temp_reader.fragments.GraphFragment;
 import com.ferit.temp_reader.fragments.ListFragment;
+import com.ferit.temp_reader.fragments.TemperatureSeriesFragment;
 import com.ferit.temp_reader.reader.Ntag_I2C_Demo;
 import com.ferit.temp_reader.R;
 import com.ferit.temp_reader.util.AuthStatus;
@@ -75,6 +81,7 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 	private static MenuItem authItem;
 	private static AuthStatus authStatus;
 	public static String PACKAGE_NAME;
+	private Tag tag;
 
 	private static Intent mIntent;
 
@@ -105,7 +112,8 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 				mTabHost.newTabSpec("temperatureList").setIndicator("LIST"), ListFragment.class, null);
 		mTabsAdapter.addTab(
 				mTabHost.newTabSpec("tempList2").setIndicator("GRAPH"), GraphFragment.class, null);
-
+		mTabsAdapter.addTab(
+				mTabHost.newTabSpec("series").setIndicator("REALTIME"), TemperatureSeriesFragment.class, null);
 		if (savedInstanceState != null) {
 			mTabHost.setCurrentTabByTag("temperatureList");
 		}
@@ -208,8 +216,14 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 	@Override
 	protected void onNewIntent(Intent nfc_intent) {
 		super.onNewIntent(nfc_intent);
+		tag = nfc_intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 		// Set the pattern for vibration
 		long pattern[] = { 0, 100 };
+
+		if(mTabHost.getCurrentTabTag().equals("series")) {
+			final Handler handler = new Handler();
+			TemperatureSeriesFragment.tag = tag;
+		}
 
 		// Vibrate on new Intent
 		Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);

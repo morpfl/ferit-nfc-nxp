@@ -99,6 +99,6 @@ public class ReadTempActivity extends Activity {
     }
 
     private void startDemo() throws IOException, InterruptedException, FormatException {
-        demo.temp();
+        demo.temp(false,0);
     }
 }

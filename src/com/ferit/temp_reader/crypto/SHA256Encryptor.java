@@ -25,8 +25,4 @@ public class SHA256Encryptor {
         byte[] hashedPassword = md.digest(message.getBytes(StandardCharsets.UTF_8));
         return Base64.getEncoder().encodeToString(hashedPassword);
     }
-
-    public boolean passwordIsCorrect(String passwordOfUser, String passwordOfTag){
-        return passwordOfTag == passwordOfUser;
-    }
 }

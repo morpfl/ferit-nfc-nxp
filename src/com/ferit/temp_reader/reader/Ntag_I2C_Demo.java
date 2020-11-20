@@ -35,6 +35,7 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 
 import android.app.Activity;
@@ -61,6 +62,7 @@ import com.ferit.temp_reader.activities.MainActivity;
 import com.ferit.temp_reader.exceptions.CommandNotSupportedException;
 import com.ferit.temp_reader.fragments.GraphFragment;
 import com.ferit.temp_reader.fragments.ListFragment;
+import com.ferit.temp_reader.fragments.TemperatureSeriesFragment;
 import com.ferit.temp_reader.listeners.WriteEEPROMListener;
 import com.ferit.temp_reader.types.Temperature;
 
@@ -154,13 +156,13 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	/**
 	 * Performs the TEMP Demo
 	 */
-	public void temp() throws IOException, FormatException {
+	public void temp(boolean seriesMeasurement, int period) throws IOException, FormatException {
 		// Reset UI
 		ListFragment.setTemperatureC(0);
 		ListFragment.setTemperatureF(0);
 
 		// The demo is executed in a separate thread to let the GUI run
-		tTask = new TemperatureReadTask();
+		tTask = new TemperatureReadTask(seriesMeasurement, period);
 		tTask.execute();
 	}
 
@@ -173,6 +175,13 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 
 		private Boolean exit = false;
 		private final byte noTransfer = 0;
+		private boolean seriesMeasurement;
+		private int period;
+
+		public TemperatureReadTask(boolean seriesMeasurement, int period){
+			this.seriesMeasurement = seriesMeasurement;
+			this.period = period;
+		}
 
 		@Override
 		protected Void doInBackground(Void... params) {
@@ -193,7 +202,93 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 					RegTimeOut = RegTimeOut - RegTimeOutStart;
 					RTest = (RegTimeOut < 5000);
 				} while (RTest);
+				if(this.seriesMeasurement){
+					while(true){
+						// Get the color to be transmitted
+						Led = ListFragment.getOption().getBytes();
 
+						// Write the color into the block to be transmitted to the
+						// NTAG board
+						dataTx[reader.getSRAMSize() - 4] = Led[0];
+						dataTx[reader.getSRAMSize() - 3] = Led[1];
+						// enable temperature and ndef
+						dataTx[reader.getSRAMSize() - 9] = 'E';
+						dataTx[reader.getSRAMSize() - 11] = 'E';
+
+						double tempC = ListFragment.getTemperatureC();
+						double tempF = ListFragment.getTemperatureF();
+
+						if (tempC > 0.0 && tempC < 75.0) {
+							DecimalFormat df = new DecimalFormat("00.00");
+							byte[] tempB = df.format(tempC).getBytes();
+
+							// The '.' is omitted
+							dataTx[reader.getSRAMSize() - 24] = tempB[0];
+							dataTx[reader.getSRAMSize() - 23] = tempB[1];
+							dataTx[reader.getSRAMSize() - 22] = tempB[3];
+							dataTx[reader.getSRAMSize() - 21] = tempB[4];
+						}
+						if (tempF > 0.0 && tempF < 120.0) {
+							DecimalFormat df = new DecimalFormat("000.00");
+							byte[] tempB = df.format(tempF).getBytes();
+
+							// The '.' is omitted
+							dataTx[reader.getSRAMSize() - 19] = tempB[0];
+							dataTx[reader.getSRAMSize() - 18] = tempB[1];
+							dataTx[reader.getSRAMSize() - 17] = tempB[2];
+							dataTx[reader.getSRAMSize() - 16] = tempB[4];
+							dataTx[reader.getSRAMSize() - 15] = tempB[5];
+						}
+
+						// wait to prevent that a RF communication is
+						// at the same time as µC I2C
+						Thread.sleep(10);
+						reader.waitforI2Cread(DELAY_TIME);
+						reader.writeSRAMBlock(dataTx, null);
+
+						// wait to prevent that a RF communication is
+						// at the same time as µC I2C
+						Thread.sleep(10);
+						reader.waitforI2Cwrite(100);
+						dataRx = reader.readSRAMBlock();
+
+						if (exit) {
+							// switch off the LED on the µC before terminating
+							dataTx[reader.getSRAMSize() - 3] = '0';
+
+							// wait to prevent that a RF communication is
+							// at the same time as µC I2C
+							Thread.sleep(10);
+							reader.waitforI2Cread(100);
+
+							reader.writeSRAMBlock(dataTx, null);
+
+							// wait to prevent that a RF communication is
+							// at the same time as µC I2C
+							Thread.sleep(10);
+							reader.waitforI2Cwrite(100);
+
+							dataRx = reader.readSRAMBlock();
+
+							cancel(true);
+							return null;
+						}
+
+						// Convert byte[] to Byte[]
+						Byte[] bytes = new Byte[dataRx.length];
+						for (int i = 0; i < dataRx.length; i++) {
+							bytes[i] = Byte.valueOf(dataRx[i]);
+						}
+						result = new Byte[2][];
+						result[0] = new Byte[1];
+						result[0][0] = Byte.valueOf((byte) 4);
+						result[1] = bytes;
+
+						// Write the result to the UI thread
+						publishProgress(result);
+						Thread.sleep(period * 1000);
+					}
+				}
 				// Get the color to be transmitted
 				Led = ListFragment.getOption().getBytes();
 
@@ -320,27 +415,37 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 					DateFormat dateFormatForEEPROM = new SimpleDateFormat("ddMMyyyyHHmmss");
 					String dateView = dateFormatForView.format(date);
 					String dateTag = dateFormatForEEPROM.format(date);
-					try {
-						increaseCountRecord();
-						writeNewIdRecord(dateTag);
-					} catch (IOException e) {
-						e.printStackTrace();
-					} catch (CommandNotSupportedException e) {
-						e.printStackTrace();
-					} catch (FormatException e) {
-						e.printStackTrace();
+					if(!seriesMeasurement){
+						try {
+							increaseCountRecord();
+							writeNewIdRecord(dateTag);
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (CommandNotSupportedException e) {
+							e.printStackTrace();
+						} catch (FormatException e) {
+							e.printStackTrace();
+						}
 					}
 					// Set the values on the screen
 					String tempValue = calcTempCelsius(temp);
 					String timestamp = dateView;
+					System.out.println(tempValue);
 					try {
-						ListFragment.addTempToList(new Temperature(timestamp, tempValue));
+						if(!this.seriesMeasurement){
+							ListFragment.addTempToList(new Temperature(timestamp, tempValue));
+						}
+						else{
+							TemperatureSeriesFragment.addTempToList(new Temperature(timestamp, tempValue));
+						}
 					} catch (JSONException e) {
 						e.printStackTrace();
 					} catch (ParseException e) {
 						e.printStackTrace();
 					}
-					GraphFragment.addTempToGraph(tempValue);
+					if(!this.seriesMeasurement){
+						GraphFragment.addTempToGraph(tempValue);
+					}
 				} else {
 					ListFragment.setTemperatureC(0);
 					ListFragment.setTempCallback("no temperature measured");
