@@ -5,6 +5,7 @@ import android.nfc.FormatException;
 import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -17,6 +18,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.ferit.temp_reader.R;
+import com.ferit.temp_reader.activities.AddSeriesActivity;
 import com.ferit.temp_reader.reader.Ntag_I2C_Demo;
 import com.ferit.temp_reader.types.Temperature;
 import com.jjoe64.graphview.GraphView;
@@ -28,9 +30,10 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class TemperatureSeriesFragment extends Fragment {
     public static TextView status;
@@ -39,8 +42,10 @@ public class TemperatureSeriesFragment extends Fragment {
     public static LineGraphSeries<DataPoint> series;
     private Button loadDataButton;
     public static Button startButton;
+    public static Button saveButton;
+    private Button clearButton;
     private static ListView tempListView;
-    private EditText period;
+    private EditText interval;
     private static ArrayAdapter<String> adapter;
     public static Tag tag;
 
@@ -57,15 +62,18 @@ public class TemperatureSeriesFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_series, container, false);
         loadDataButton = v.findViewById(R.id.button_load_existing_data);
         startButton = v.findViewById(R.id.start_button);
-        period = v.findViewById(R.id.period_sec);
+        saveButton = v.findViewById(R.id.save);
+        clearButton = v.findViewById(R.id.clear);
+        interval = v.findViewById(R.id.interval);
         graph = (GraphView) v.findViewById(R.id.graph2);
+        adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, measuredTemperatures);
         status = (TextView) v.findViewById(R.id.status_text);
         tempListView = (ListView) v.findViewById(R.id.tempList);
-        adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, this.measuredTemperatures);
         tempListView.setAdapter(adapter);
         loadDataButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                measuredTemperatures.clear();
                 loadDataFromStorage();
             }
         });
@@ -83,12 +91,37 @@ public class TemperatureSeriesFragment extends Fragment {
                 }
             }
         });
+        saveButton.setOnClickListener(new View.OnClickListener(){
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public void onClick(View view){
+                ArrayList<Temperature> seriesTemps = new ArrayList<Temperature>();
+                seriesTemps = (ArrayList) measuredTemperatures.stream().filter(temp -> temp.getSeriesTemp()).collect(Collectors.toList());
+                Intent i = new Intent(getActivity(), AddSeriesActivity.class);
+                i.putParcelableArrayListExtra("seriesTemps", seriesTemps);
+                startActivity(i);
+            }
+        });
+        clearButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view){
+                series = new LineGraphSeries<>();
+                graph.removeAllSeries();
+                graph.addSeries(series);
+                graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
+                graph.getViewport().setMaxX(measuredTemperatures.size());
+                graph.onDataChanged(true, true);
+                measuredTemperatures.clear();
+                adapter.notifyDataSetChanged();
+            }
+        });
         return v;
     }
 
     private void startSeriesMeasurement() throws IOException, FormatException, InterruptedException {
         Ntag_I2C_Demo demo = new Ntag_I2C_Demo(tag, getActivity());
-        demo.temp(true, Integer.parseInt(period.getText().toString()));
+        int intervalNumber = interval.getText().toString().equals("") ? 0 : Integer.parseInt(interval.getText().toString());
+        demo.temp(true, intervalNumber);
     }
 
     public static void addTempToList(Temperature temperature){
@@ -122,7 +155,7 @@ public class TemperatureSeriesFragment extends Fragment {
                 JSONObject jsonObject = (JSONObject) temps.get(i);
                 String timestamp = (String) jsonObject.get("timestamp");
                 String tempValue = (String) jsonObject.get("tempValue");
-                Temperature temperature = new Temperature(timestamp, tempValue);
+                Temperature temperature = new Temperature(timestamp, tempValue, false);
                 measuredTemperatures.add(temperature);
             }
         } catch (ParseException e) {
@@ -131,6 +164,9 @@ public class TemperatureSeriesFragment extends Fragment {
         if(this.measuredTemperatures.size() > 0){
             series = new LineGraphSeries<>(convertToDataPointArray());
             graph.addSeries(series);
+            adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, measuredTemperatures);
+            adapter.notifyDataSetChanged();
+            tempListView.setAdapter(adapter);
         }
         graph.getGridLabelRenderer().setVerticalAxisTitle("temperature");
         graph.getGridLabelRenderer().setHorizontalAxisTitle("measurements");

@@ -36,21 +36,36 @@
         android:orientation="horizontal">
 
         <EditText
-            android:id="@+id/period_sec"
+            android:id="@+id/interval"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="2"
             android:ems="10"
-            android:hint="Enter period (sec)"
+            android:hint="interval (mil.sec)"
             android:inputType="date" />
 
         <Button
             android:id="@+id/start_button"
-            android:layout_width="wrap_content"
+            android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:layout_weight="2"
             android:clickable="false"
             android:text="@string/start_series" />
+
+        <Button
+            android:id="@+id/save"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:clickable="false"
+            android:text="Save" />
+
+        <Button
+            android:id="@+id/clear"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="Clear" />
 
     </LinearLayout>
 
@@ -59,7 +74,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingLeft="5dp"
-        android:text="Waiting for a tag..." />
+        android:text="Connect to tag and press start." />
 
     <android.support.constraint.ConstraintLayout
         android:layout_width="match_parent"
@@ -69,7 +84,7 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintTop_toBottomOf="@+id/status_text"
         tools:layout_editor_absoluteX="5dp"
-        tools:layout_editor_absoluteY="288dp" >
+        tools:layout_editor_absoluteY="288dp">
 
         <ListView
             android:id="@+id/tempList"
