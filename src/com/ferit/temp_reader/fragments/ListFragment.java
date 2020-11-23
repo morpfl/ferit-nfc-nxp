@@ -101,7 +101,7 @@ public class ListFragment extends Fragment {
                 JSONObject jsonObj = (JSONObject) array.get(i);
                 String timestamp = (String) jsonObj.get("timestamp");
                 String tempValue = (String) jsonObj.get("tempValue");
-                Temperature temperature = new Temperature(timestamp, tempValue);
+                Temperature temperature = new Temperature(timestamp, tempValue, false);
                 measuredTemperatures.add(temperature);
             }
             adapter.notifyDataSetChanged();

@@ -184,6 +184,14 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		}
 
 		@Override
+		protected void onCancelled() {
+			if(seriesMeasurement){
+				TemperatureSeriesFragment.status.setText("Tag lost or measurement finished.");
+				TemperatureSeriesFragment.saveButton.setClickable(true);
+			}
+		}
+
+		@Override
 		protected Void doInBackground(Void... params) {
 			byte[] dataTx = new byte[reader.getSRAMSize()];
 			byte[] dataRx = new byte[reader.getSRAMSize()];
@@ -269,7 +277,6 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 							reader.waitforI2Cwrite(100);
 
 							dataRx = reader.readSRAMBlock();
-
 							cancel(true);
 							return null;
 						}
@@ -286,7 +293,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 
 						// Write the result to the UI thread
 						publishProgress(result);
-						Thread.sleep(period * 1000);
+						Thread.sleep(period);
 					}
 				}
 				// Get the color to be transmitted
@@ -392,9 +399,10 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		@Override
 		protected void onProgressUpdate(Byte[]... bytes) {
 			if (bytes[0][0] == noTransfer) {
-
 			}else {
-
+				if(seriesMeasurement){
+					TemperatureSeriesFragment.status.setText("measuring...");
+				}
 				int temp = 0;
 
 				// Adding first "Byte"
@@ -430,13 +438,12 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 					// Set the values on the screen
 					String tempValue = calcTempCelsius(temp);
 					String timestamp = dateView;
-					System.out.println(tempValue);
 					try {
 						if(!this.seriesMeasurement){
-							ListFragment.addTempToList(new Temperature(timestamp, tempValue));
+							ListFragment.addTempToList(new Temperature(timestamp, tempValue, false));
 						}
 						else{
-							TemperatureSeriesFragment.addTempToList(new Temperature(timestamp, tempValue));
+							TemperatureSeriesFragment.addTempToList(new Temperature(timestamp, tempValue, true));
 						}
 					} catch (JSONException e) {
 						e.printStackTrace();
@@ -447,8 +454,13 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 						GraphFragment.addTempToGraph(tempValue);
 					}
 				} else {
-					ListFragment.setTemperatureC(0);
-					ListFragment.setTempCallback("no temperature measured");
+					if(seriesMeasurement){
+						TemperatureSeriesFragment.status.setText("Tag lost, try again!");
+					}
+					else{
+						ListFragment.setTemperatureC(0);
+						ListFragment.setTempCallback("no temperature measured");
+					}
 				}
 			}
 		}
