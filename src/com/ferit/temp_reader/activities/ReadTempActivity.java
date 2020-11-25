@@ -11,7 +11,7 @@ import android.os.Bundle;
 import android.os.Vibrator;
 
 import com.ferit.temp_reader.reader.I2C_Enabled_Commands;
-import com.ferit.temp_reader.reader.Ntag_I2C_Demo;
+import com.ferit.temp_reader.reader.Ntag_I2C_Jobs;
 import com.ferit.temp_reader.R;
 
 import java.io.IOException;
@@ -19,7 +19,7 @@ import java.io.IOException;
 public class ReadTempActivity extends Activity {
 
     private static Context mContext;
-    private Ntag_I2C_Demo demo;
+    private Ntag_I2C_Jobs demo;
     private NfcAdapter mAdapter;
     private I2C_Enabled_Commands reader;
     private PendingIntent pendingIntent;
@@ -92,7 +92,7 @@ public class ReadTempActivity extends Activity {
     public void doProcess(Intent nfc_intent) throws InterruptedException, FormatException, IOException {
         mIntent = nfc_intent;
         Tag tag = nfc_intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        demo = new Ntag_I2C_Demo(tag, this);
+        demo = new Ntag_I2C_Jobs(tag, this);
         if (demo != null) {
             startDemo();
         }

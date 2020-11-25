@@ -5,7 +5,6 @@ import android.nfc.FormatException;
 import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -19,7 +18,7 @@ import android.widget.TextView;
 
 import com.ferit.temp_reader.R;
 import com.ferit.temp_reader.activities.AddSeriesActivity;
-import com.ferit.temp_reader.reader.Ntag_I2C_Demo;
+import com.ferit.temp_reader.reader.Ntag_I2C_Jobs;
 import com.ferit.temp_reader.types.Temperature;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
@@ -73,6 +72,7 @@ public class TemperatureSeriesFragment extends Fragment {
         loadDataButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                graph.removeAllSeries();
                 measuredTemperatures.clear();
                 loadDataFromStorage();
             }
@@ -108,10 +108,10 @@ public class TemperatureSeriesFragment extends Fragment {
                 series = new LineGraphSeries<>();
                 graph.removeAllSeries();
                 graph.addSeries(series);
+                measuredTemperatures.clear();
                 graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
                 graph.getViewport().setMaxX(measuredTemperatures.size());
                 graph.onDataChanged(true, true);
-                measuredTemperatures.clear();
                 adapter.notifyDataSetChanged();
             }
         });
@@ -119,7 +119,7 @@ public class TemperatureSeriesFragment extends Fragment {
     }
 
     private void startSeriesMeasurement() throws IOException, FormatException, InterruptedException {
-        Ntag_I2C_Demo demo = new Ntag_I2C_Demo(tag, getActivity());
+        Ntag_I2C_Jobs demo = new Ntag_I2C_Jobs(tag, getActivity());
         int intervalNumber = interval.getText().toString().equals("") ? 0 : Integer.parseInt(interval.getText().toString());
         demo.temp(true, intervalNumber);
     }
@@ -148,7 +148,6 @@ public class TemperatureSeriesFragment extends Fragment {
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void loadDataFromStorage(){
-        this.measuredTemperatures = new LinkedList<Temperature>();
         try {
             JSONArray temps = ListFragment.getTempsFromFile();
             for(int i = 0; i < temps.size(); i++){
@@ -163,11 +162,14 @@ public class TemperatureSeriesFragment extends Fragment {
         }
         if(this.measuredTemperatures.size() > 0){
             series = new LineGraphSeries<>(convertToDataPointArray());
-            graph.addSeries(series);
             adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, measuredTemperatures);
             adapter.notifyDataSetChanged();
             tempListView.setAdapter(adapter);
         }
+        else{
+            series = new LineGraphSeries<>();
+        }
+        graph.addSeries(series);
         graph.getGridLabelRenderer().setVerticalAxisTitle("temperature");
         graph.getGridLabelRenderer().setHorizontalAxisTitle("measurements");
         graph.getViewport().setMinX(0);

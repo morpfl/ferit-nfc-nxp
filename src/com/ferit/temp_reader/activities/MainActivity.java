@@ -27,7 +27,6 @@
 */
 package com.ferit.temp_reader.activities;
 
-import java.io.IOException;
 import java.net.NetworkInterface;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
@@ -36,10 +35,7 @@ import java.util.Locale;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.nfc.Tag;
-import android.nfc.tech.Ndef;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.RequiresApi;
@@ -54,7 +50,6 @@ import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TabHost;
@@ -65,14 +60,15 @@ import com.ferit.temp_reader.crypto.SHA256Encryptor;
 import com.ferit.temp_reader.fragments.AuthDialogFragment;
 import com.ferit.temp_reader.fragments.GraphFragment;
 import com.ferit.temp_reader.fragments.ListFragment;
+import com.ferit.temp_reader.fragments.MetadataFragment;
 import com.ferit.temp_reader.fragments.TemperatureSeriesFragment;
-import com.ferit.temp_reader.reader.Ntag_I2C_Demo;
+import com.ferit.temp_reader.reader.Ntag_I2C_Jobs;
 import com.ferit.temp_reader.R;
 import com.ferit.temp_reader.util.AuthStatus;
 
 public class MainActivity extends FragmentActivity implements AuthDialogFragment.NoticeDialogListener {
 	public final static int AUTH_REQUEST = 0;
-	public static Ntag_I2C_Demo demo;
+	public static Ntag_I2C_Jobs demo;
 	private TabHost mTabHost;
 	private ViewPager mViewPager;
 	private TabsAdapter mTabsAdapter;
@@ -114,6 +110,8 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 				mTabHost.newTabSpec("tempList2").setIndicator("GRAPH"), GraphFragment.class, null);
 		mTabsAdapter.addTab(
 				mTabHost.newTabSpec("series").setIndicator("REALTIME"), TemperatureSeriesFragment.class, null);
+		mTabsAdapter.addTab(
+				mTabHost.newTabSpec("metadata").setIndicator("METADATA"), MetadataFragment.class, null);
 		if (savedInstanceState != null) {
 			mTabHost.setCurrentTabByTag("temperatureList");
 		}
@@ -127,7 +125,7 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		});
 
 		// Initialize the demo in order to handle tab change events
-		demo = new Ntag_I2C_Demo(null, this);
+		demo = new Ntag_I2C_Jobs(null, this);
 		mAdapter = NfcAdapter.getDefaultAdapter(this);
 		setNfcForeground();
 		checkNFC();
@@ -189,7 +187,6 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		if (mAdapter != null) {
 			mAdapter.enableForegroundDispatch(this, mPendingIntent, null, null);
 		}
-		System.out.println("back at main: " + authStatus);
 		if(this.authStatus.equals(AuthStatus.AUTHENTICATED)){
 			authItem.setIcon(R.drawable.unlock);
 		}

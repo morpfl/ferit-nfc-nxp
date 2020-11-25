@@ -29,30 +29,23 @@ package com.ferit.temp_reader.reader;
 
 import java.io.IOException;
 
-import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.Base64;
+import java.util.Arrays;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.Tag;
-import android.nfc.tech.Ndef;
-import android.nfc.tech.NfcA;
-import android.nfc.tech.NfcB;
-import android.nfc.tech.NfcF;
-import android.nfc.tech.NfcV;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
@@ -62,9 +55,11 @@ import com.ferit.temp_reader.activities.MainActivity;
 import com.ferit.temp_reader.exceptions.CommandNotSupportedException;
 import com.ferit.temp_reader.fragments.GraphFragment;
 import com.ferit.temp_reader.fragments.ListFragment;
+import com.ferit.temp_reader.fragments.MetadataFragment;
 import com.ferit.temp_reader.fragments.TemperatureSeriesFragment;
 import com.ferit.temp_reader.listeners.WriteEEPROMListener;
 import com.ferit.temp_reader.types.Temperature;
+import com.ferit.temp_reader.util.NtagUtil;
 
 import org.json.JSONException;
 import org.json.simple.parser.ParseException;
@@ -77,7 +72,7 @@ import org.json.simple.parser.ParseException;
  *
  */
 
-public class Ntag_I2C_Demo implements WriteEEPROMListener {
+public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 
 	private I2C_Enabled_Commands reader;
 	private Activity main;
@@ -91,7 +86,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	 * @param tag Tag with which the Demos should be performed
 	 * @param main MainActivity
 	 */
-	public Ntag_I2C_Demo(Tag tag, final Activity main) {
+	public Ntag_I2C_Jobs(Tag tag, final Activity main) {
 		try {
 			if (tag == null) {
 				this.main = null;
@@ -117,8 +112,10 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
+
+	@Override
+	public void onWriteEEPROM(int bytes) { }
 
 	private void showAlert(final String message, final String title) {
 		main.runOnUiThread(new Runnable() {
@@ -164,11 +161,6 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		// The demo is executed in a separate thread to let the GUI run
 		tTask = new TemperatureReadTask(seriesMeasurement, period);
 		tTask.execute();
-	}
-
-	@Override
-	public void onWriteEEPROM(int bytes) {
-
 	}
 
 	private class TemperatureReadTask extends AsyncTask<Void, Byte[], Void> {
@@ -395,7 +387,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 			return null;
 		}
 
-		@RequiresApi(api = Build.VERSION_CODES.KITKAT)
+		@RequiresApi(api = Build.VERSION_CODES.N)
 		@Override
 		protected void onProgressUpdate(Byte[]... bytes) {
 			if (bytes[0][0] == noTransfer) {
@@ -420,13 +412,14 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 				if (temp != 0) {
 					Date date = new Date();
 					DateFormat dateFormatForView = new SimpleDateFormat("dd.MM.yyyy - HH:mm:ss");
-					DateFormat dateFormatForEEPROM = new SimpleDateFormat("ddMMyyyyHHmmss");
+					DateFormat dateFormatForEEPROM = new SimpleDateFormat("ddMMyyHHmmss");
 					String dateView = dateFormatForView.format(date);
 					String dateTag = dateFormatForEEPROM.format(date);
 					if(!seriesMeasurement){
 						try {
 							increaseCountRecord();
-							writeNewIdRecord(dateTag);
+							//writeNewIdRecord(dateTag);
+							appendIdDataToRecord(dateTag);
 						} catch (IOException e) {
 							e.printStackTrace();
 						} catch (CommandNotSupportedException e) {
@@ -436,7 +429,7 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 						}
 					}
 					// Set the values on the screen
-					String tempValue = calcTempCelsius(temp);
+					String tempValue = NtagUtil.calcTempCelsius(temp);
 					String timestamp = dateView;
 					try {
 						if(!this.seriesMeasurement){
@@ -466,62 +459,94 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		}
 	}
 
-	private void writeNewIdRecord(String date) throws CommandNotSupportedException, FormatException, IOException {
-		String mac = MainActivity.getMacAddr();
-		String payload = mac + date;
-		NdefRecord newRecord = getNdefTextRecord(payload, "id");
-		NdefMessage message = reader.readNDEF();
-		NdefRecord[] records = message.getRecords();
-		NdefRecord[] newRecords = new NdefRecord[records.length + 1];
-		System.arraycopy(records,0,newRecords,0,records.length);
-		newRecords[records.length] = newRecord;
-		NdefMessage updatedMessage = new NdefMessage(newRecords);
-		reader.writeNDEF(updatedMessage, this);
+	public void readMetadata(){
+		GetMetadataTask metadataTask = new GetMetadataTask();
+		metadataTask.execute();
 	}
 
+	public class GetMetadataTask extends AsyncTask<Void, String, NdefMessage> {
+		private List<String> metadataStrings = new LinkedList<String>();
+		private boolean noMetadataAvailable = false;
+		// index declarations, see memory design chapter in documentation for further information.
+		private final int METADATA_RECORD_SIZE = 11;
+		private final int MAC_ADDRESS_LAST_INDEX = 5;
+		private final int TIMESTAMP_LAST_INDEX = 10;
 
+		@RequiresApi(api = Build.VERSION_CODES.N)
+		@Override
+		protected NdefMessage doInBackground(Void... voids) {
+			try {
+				NdefMessage message = reader.readNDEF();
+				NdefRecord[] records = message.getRecords();
+				List<NdefRecord> recordsAsList = Arrays.asList(records);
+				Optional<NdefRecord> metadataRecordOpt = recordsAsList.stream()
+						.filter(record -> record.getId().length > 0 && record.getId()[0] == new Integer(1).byteValue())
+						.findFirst();
+				if(!metadataRecordOpt.isPresent()){
+					noMetadataAvailable = true;
+					cancel(true);
+				}
+				NdefRecord metadataRecord = metadataRecordOpt.get();
+				byte[] payload = metadataRecord.getPayload();
+				String mac = "";
+				String timestamp = "";
+				for(int currentByteNumber = 0; currentByteNumber < payload.length; currentByteNumber++){
+					// read current byte and convert it to a readable hex string
+					Byte currentByte = payload[currentByteNumber];
+					Integer test = Integer.parseInt(currentByte.toString());
+					char[] hexCharAr = Integer.toHexString(test).toCharArray();
+					String hexString;
+					// some formatting, because sometimes the hex value is interpreted as ffffffxx, where xx is the actual value that is of interest.
+					if(hexCharAr.length > 2){
+						hexString = String.valueOf(hexCharAr).substring(6);
+					}
+					else if (hexCharAr.length == 1){
+						hexString = String.valueOf(hexCharAr);
+						hexString = "0" + hexString;
+					}
+					else {
+						hexString = String.valueOf(hexCharAr);
+					}
+					// determine the content of the byte, see memory design in documentation for further information.
+					if((currentByteNumber % METADATA_RECORD_SIZE) == 0) {
+						mac = "";
+						timestamp = "";
+					}
+					if((currentByteNumber % METADATA_RECORD_SIZE) < MAC_ADDRESS_LAST_INDEX){
+						mac = mac.concat(hexString + ":");
+					}
+					if((currentByteNumber % METADATA_RECORD_SIZE) == MAC_ADDRESS_LAST_INDEX){
+						mac = mac.concat(hexString);
+					}
+					if((currentByteNumber % METADATA_RECORD_SIZE) > MAC_ADDRESS_LAST_INDEX){
+						timestamp = timestamp.concat(hexString);
+					}
+					if((currentByteNumber % METADATA_RECORD_SIZE) == TIMESTAMP_LAST_INDEX){
+						Long timestampLong = Long.parseLong(timestamp,16);
+						String formattedForView = NtagUtil.formatMetadata(mac, String.valueOf(timestampLong));
+						metadataStrings.add(formattedForView);
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (FormatException e) {
+				e.printStackTrace();
+			} catch (CommandNotSupportedException e) {
+				e.printStackTrace();
+			} catch (java.text.ParseException e) {
+				e.printStackTrace();
+			}
+			cancel(true);
+			return null;
+		}
 
-	private void increaseCountRecord() throws CommandNotSupportedException, FormatException, IOException {
-		NdefMessage message = reader.readNDEF();
-		NdefRecord[] records = message.getRecords();
-		for(int i = 0; i < records.length; i++){
-			if(new String(records[i].getId()).equals("ct")){
-				char[] payload = new String(records[i].getPayload()).toCharArray();
-				char[] countCharArray = new char[payload.length - 1];
-				System.arraycopy(payload,1,countCharArray,0,payload.length - 1);
-				String countString = new String(countCharArray);
-				Integer payloadAsNumber = Integer.parseInt(countString);
-				payloadAsNumber = payloadAsNumber + 1;
-				NdefRecord countRecUpdated = getNdefTextRecord(String.valueOf(payloadAsNumber), "ct");
-				records[i] = countRecUpdated;
-				break;
+		@Override
+		protected void onCancelled() {
+			MetadataFragment.setMetadata(metadataStrings);
+			if(noMetadataAvailable){
+				MetadataFragment.infoText.setText("No metadata stored on the tag.");
 			}
 		}
-		NdefMessage updatedMessage = new NdefMessage(records);
-		reader.writeNDEF(updatedMessage, this);
-	}
-
-	/**
-	 * Calculates the Temperature in Celsius.
-	 * 
-	 * @param temp
-	 *            Temperature
-	 * @return String of Temperature in Dez
-	 */
-	private String calcTempCelsius(int temp) {
-		double tempDouble = 0;
-		String tempString = "";
-		// If the 11 Bit is 1 it is negative
-		if ((temp & (1 << 11)) == (1 << 11)) {
-			// Mask out the 11 Bit
-			temp &= ~(1 << 11);
-			tempString += "-";
-		}
-		tempDouble = 0.125 * temp;
-		// Update the value on the Led fragment
-		DecimalFormat df = new DecimalFormat("#.00");
-		tempString = df.format(tempDouble);
-		return tempString;
 	}
 
 	public void getPassId(){
@@ -530,8 +555,6 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 	}
 
 	public class GetPassIdTask extends AsyncTask<Void, String, NdefMessage> {
-
-		public GetPassIdTask() { }
 
 		@Override
 		protected NdefMessage doInBackground(Void... voids) {
@@ -568,14 +591,14 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		private WriteEEPROMListener listener;
 		private NdefMessage updatedMessage;
 
-		public ResetTempTask(Ntag_I2C_Demo ntag_i2C_demo) {
-			this.listener = ntag_i2C_demo;
+		public ResetTempTask(Ntag_I2C_Jobs ntag_i2C_jobs) {
+			this.listener = ntag_i2C_jobs;
 		}
 
 		@Override
 		protected NdefMessage doInBackground(Void... voids) {
 			try {
-				updatedMessage = createDefaultNdefMessage();
+				updatedMessage = NtagUtil.createDefaultNdefMessage(tagHash);
 				reader.writeNDEF(updatedMessage, listener);
 				return updatedMessage;
 			} catch (IOException e) {
@@ -589,41 +612,49 @@ public class Ntag_I2C_Demo implements WriteEEPROMListener {
 		}
 	}
 
-	/**
-	 * Creates the default NDEF Message
-	 * @return NDEF Message
-	 * @throws UnsupportedEncodingException
-	 */
-	private NdefMessage createDefaultNdefMessage()
-			throws IOException {
-		String passId = "ps";
-		String countId = "ct";
-		byte[] textBytes = tagHash.getBytes();
-		int textLength = textBytes.length;
-		byte[] payload = new byte[1 + textLength];
-		System.arraycopy(textBytes, 0, payload, 1, textLength);
-		NdefRecord pass = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
-				NdefRecord.RTD_TEXT, passId.getBytes(), payload);
-		NdefRecord aar = NdefRecord.createApplicationRecord("com.ferit.temp_reader");
-		NdefRecord countRec = getNdefTextRecord("0",countId);
-		NdefRecord[] records = { pass,aar,countRec };
-		NdefMessage message = new NdefMessage(records);
-		return message;
+	@RequiresApi(api = Build.VERSION_CODES.N)
+	private void appendIdDataToRecord(String timestamp) throws CommandNotSupportedException, FormatException, IOException {
+		String mac = MainActivity.getMacAddr();
+		NdefMessage message = reader.readNDEF();
+		List<NdefRecord> records = Arrays.asList(message.getRecords());
+		Optional<NdefRecord> optIdRecord = records.stream().filter(record -> record.getId().length != 0 && record.getId()[0] == new Integer(1).byteValue()).findFirst();
+		if(optIdRecord.isPresent()){
+			NdefRecord idRecord = optIdRecord.get();
+			int index = records.indexOf(idRecord);
+			byte[] oldPayload = idRecord.getPayload();
+			byte[] payloadToAppend = NtagUtil.getMetadataRecordPayloadBytes(mac,timestamp);
+			records.set(index, NtagUtil.appendNewMetadataPayload(oldPayload,payloadToAppend));
+			NdefMessage newMessage = new NdefMessage((NdefRecord[]) records.toArray());
+			reader.writeNDEF(newMessage,this);
+		}
+		else{
+			byte[] payload = NtagUtil.getMetadataRecordPayloadBytes(mac,timestamp);
+			NdefRecord newRecord = NtagUtil.createNewMetadataRecord(payload);
+			NdefRecord[] newRecords = new NdefRecord[message.getRecords().length + 1];
+			System.arraycopy(message.getRecords(),0,newRecords,0,message.getRecords().length);
+			newRecords[newRecords.length - 1] = newRecord;
+			NdefMessage newMessage = new NdefMessage(newRecords);
+			reader.writeNDEF(newMessage,this);
+		}
 	}
 
-	/**
-	 * Creates a NDEF Text-Record with id and payload.
-	 * @param payloadString The string of the NDEF Text message.
-	 * @param id The id of the record.
-	 * @return NDEF Message
-	 */
-	private NdefRecord getNdefTextRecord(String payloadString, String id) {
-		byte[] payloadBytes = payloadString.getBytes();
-		int textLength = payloadBytes.length;
-		byte[] payload = new byte[1 + textLength];
-		System.arraycopy(payloadBytes, 0, payload, 1, textLength);
-		NdefRecord record = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
-				NdefRecord.RTD_TEXT, id.getBytes(), payload);
-		return record;
+	private void increaseCountRecord() throws CommandNotSupportedException, FormatException, IOException {
+		NdefMessage message = reader.readNDEF();
+		NdefRecord[] records = message.getRecords();
+		for(int i = 0; i < records.length; i++){
+			if(new String(records[i].getId()).equals("ct")){
+				char[] payload = new String(records[i].getPayload()).toCharArray();
+				char[] countCharArray = new char[payload.length - 1];
+				System.arraycopy(payload,1,countCharArray,0,payload.length - 1);
+				String countString = new String(countCharArray);
+				Integer payloadAsNumber = Integer.parseInt(countString);
+				payloadAsNumber = payloadAsNumber + 1;
+				NdefRecord countRecUpdated = NtagUtil.getNdefTextRecord(String.valueOf(payloadAsNumber), "ct");
+				records[i] = countRecUpdated;
+				break;
+			}
+		}
+		NdefMessage updatedMessage = new NdefMessage(records);
+		reader.writeNDEF(updatedMessage, this);
 	}
 }
