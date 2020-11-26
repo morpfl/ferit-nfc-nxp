@@ -12,5 +12,6 @@ build/
 .idea/modules.xml
 .idea/scopes/scope_settings.xml
 .idea/vcs.xml
-.local.properties
+.idea/
+local.properties
 .idea/caches/
