@@ -42,6 +42,7 @@ import java.util.Optional;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.icu.text.AlphabeticIndex;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
@@ -60,6 +61,7 @@ import com.ferit.temp_reader.fragments.TemperatureSeriesFragment;
 import com.ferit.temp_reader.listeners.WriteEEPROMListener;
 import com.ferit.temp_reader.types.Temperature;
 import com.ferit.temp_reader.util.NtagUtil;
+import com.ferit.temp_reader.util.RecordId;
 
 import org.json.JSONException;
 import org.json.simple.parser.ParseException;
@@ -144,10 +146,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 	 *
 	 */
 	public boolean isReady() {
-		if (tag != null && reader != null) {
-			return true;
-		}
-		return false;
+		return tag != null && reader != null;
 	}
 
 	/**
@@ -165,10 +164,10 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 
 	private class TemperatureReadTask extends AsyncTask<Void, Byte[], Void> {
 
-		private Boolean exit = false;
+		private final Boolean exit = false;
 		private final byte noTransfer = 0;
-		private boolean seriesMeasurement;
-		private int period;
+		private final boolean seriesMeasurement;
+		private final int period;
 
 		public TemperatureReadTask(boolean seriesMeasurement, int period){
 			this.seriesMeasurement = seriesMeasurement;
@@ -399,7 +398,6 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 
 				// Adding first "Byte"
 				temp = ((bytes[1][reader.getSRAMSize() - 5] >> 5) & 0x00000007);
-				System.out.println(temp);
 				// Adding second Byte
 				temp |= ((bytes[1][reader.getSRAMSize() - 6] << 3) & 0x000007F8);
 
@@ -465,7 +463,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 	}
 
 	public class GetMetadataTask extends AsyncTask<Void, String, NdefMessage> {
-		private List<String> metadataStrings = new LinkedList<String>();
+		private final List<String> metadataStrings = new LinkedList<String>();
 		private boolean noMetadataAvailable = false;
 		// index declarations, see memory design chapter in documentation for further information.
 		private final int METADATA_RECORD_SIZE = 11;
@@ -480,7 +478,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 				NdefRecord[] records = message.getRecords();
 				List<NdefRecord> recordsAsList = Arrays.asList(records);
 				Optional<NdefRecord> metadataRecordOpt = recordsAsList.stream()
-						.filter(record -> record.getId().length > 0 && record.getId()[0] == new Integer(1).byteValue())
+						.filter(record -> record.getId().length > 0 && new String(record.getId()).equals(RecordId.MD.toString()))
 						.findFirst();
 				if(!metadataRecordOpt.isPresent()){
 					noMetadataAvailable = true;
@@ -556,20 +554,23 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 
 	public class GetPassIdTask extends AsyncTask<Void, String, NdefMessage> {
 
+		@RequiresApi(api = Build.VERSION_CODES.N)
 		@Override
 		protected NdefMessage doInBackground(Void... voids) {
 			try {
 				NdefMessage message = reader.readNDEF();
 				NdefRecord[] records = message.getRecords();
-				for(int i = 0; i < records.length; i++){
-					if (new String(records[i].getId()).equals("ps")){
-						char[] payloadArray = new String(records[i].getPayload()).toCharArray();
-						char[] hashArray = new char[payloadArray.length - 1];
-						System.arraycopy(payloadArray,1,hashArray,0,hashArray.length);
-						String hash = new String(hashArray);
-						GetPassActivity.authenticate(hash);
-					}
+				List<NdefRecord> recordsAsList = Arrays.asList(records);
+				Optional<NdefRecord> recordOpt = recordsAsList.stream().filter(record -> new String(record.getId()).equals(RecordId.PS.toString())).findFirst();
+				if(!recordOpt.isPresent()){
+					cancel(true);
 				}
+				NdefRecord record = recordOpt.get();
+				char[] payloadArray = new String(record.getPayload()).toCharArray();
+				char[] hashArray = new char[payloadArray.length - 1];
+				System.arraycopy(payloadArray,1,hashArray,0,hashArray.length);
+				String hash = new String(hashArray);
+				GetPassActivity.authenticate(hash);
 				return message;
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -588,7 +589,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 	}
 
 	public class ResetTempTask extends AsyncTask<Void, String, NdefMessage> {
-		private WriteEEPROMListener listener;
+		private final WriteEEPROMListener listener;
 		private NdefMessage updatedMessage;
 
 		public ResetTempTask(Ntag_I2C_Jobs ntag_i2C_jobs) {
@@ -617,7 +618,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		String mac = MainActivity.getMacAddr();
 		NdefMessage message = reader.readNDEF();
 		List<NdefRecord> records = Arrays.asList(message.getRecords());
-		Optional<NdefRecord> optIdRecord = records.stream().filter(record -> record.getId().length != 0 && record.getId()[0] == new Integer(1).byteValue()).findFirst();
+		Optional<NdefRecord> optIdRecord = records.stream().filter(record -> record.getId().length != 0 && new String(record.getId()).equals(RecordId.MD.toString())).findFirst();
 		if(optIdRecord.isPresent()){
 			NdefRecord idRecord = optIdRecord.get();
 			int index = records.indexOf(idRecord);
@@ -629,7 +630,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		}
 		else{
 			byte[] payload = NtagUtil.getMetadataRecordPayloadBytes(mac,timestamp);
-			NdefRecord newRecord = NtagUtil.createNewRecord(1, payload);
+			NdefRecord newRecord = NtagUtil.createNewRecord(RecordId.MD.toString(), payload);
 			NdefRecord[] newRecords = new NdefRecord[message.getRecords().length + 1];
 			System.arraycopy(message.getRecords(),0,newRecords,0,message.getRecords().length);
 			newRecords[newRecords.length - 1] = newRecord;
@@ -644,22 +645,23 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		NdefRecord[] records = message.getRecords();
 		List<NdefRecord> recordsAsList = Arrays.asList(records);
 		Optional<NdefRecord> countRecordOpt = recordsAsList.stream()
-				.filter(record -> record.getId()[0] == new Integer(2).byteValue())
+				.filter(record -> new String(record.getId()).equals(RecordId.CT.toString()))
 				.findFirst();
 		if(!countRecordOpt.isPresent()){
 			return;
 		}
 		NdefRecord countRecord = countRecordOpt.get();
 		String countAsHex = "";
-		for(int byteCount = 0; byteCount < countRecord.getPayload().length; byteCount++){
+		for(int byteCount = 0; byteCount < 4; byteCount++){
 			Byte currentByte = countRecord.getPayload()[byteCount];
-			Integer intValue = Integer.parseInt(currentByte.toString());
-			countAsHex = countAsHex.concat(Integer.toHexString(intValue));
+			Integer integer = Integer.parseInt(currentByte.toString());
+			countAsHex = countAsHex.concat(Integer.toHexString(integer));
 		}
-		System.out.println("count as hex" + countAsHex);
 		Integer newCountAsInt = Integer.parseInt(countAsHex,16) + 1;
-		byte[] newPayloadForRecord = NtagUtil.convertHexStringToByteArray(Integer.toHexString(newCountAsInt));
-		NdefRecord updatedRecord = NtagUtil.createNewRecord(2, newPayloadForRecord);
+		String newHexString = Integer.toHexString(newCountAsInt);
+		String newHexStringWithPadding = String.format("%8s", newHexString).replace(' ', '0');
+		byte[] newPayloadForRecord = NtagUtil.convertHexStringToByteArray(newHexStringWithPadding);
+		NdefRecord updatedRecord = NtagUtil.createNewRecord(RecordId.CT.toString(), newPayloadForRecord);
 		recordsAsList.set(recordsAsList.indexOf(countRecord),updatedRecord);
 		NdefMessage updatedMessage = new NdefMessage((NdefRecord[]) recordsAsList.toArray());
 		reader.writeNDEF(updatedMessage, this);

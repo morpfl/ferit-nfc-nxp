@@ -48,37 +48,17 @@ public class NtagUtil {
      */
     public static NdefMessage createDefaultNdefMessage(String tagHash)
             throws IOException {
-        String passId = "ps";
-        Integer countId = 2;
         byte[] textBytes = tagHash.getBytes();
         int textLength = textBytes.length;
         byte[] payload = new byte[1 + textLength];
         System.arraycopy(textBytes, 0, payload, 1, textLength);
-        NdefRecord pass = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
-                NdefRecord.RTD_TEXT, passId.getBytes(), payload);
+        NdefRecord pass = createNewRecord(RecordId.PS.toString(),payload);
         NdefRecord aar = NdefRecord.createApplicationRecord("com.ferit.temp_reader");
-        NdefRecord countRec = createNewRecord(countId, new byte[4]);
+        NdefRecord countRec = createNewRecord(RecordId.CT.toString(), new byte[4]);
         NdefRecord[] records = { pass,aar,countRec };
         NdefMessage message = new NdefMessage(records);
         return message;
     }
-
-    /**
-     * Creates a NDEF Text-Record with id and payload.
-     * @param payloadString The string of the NDEF Text message.
-     * @param id The id of the record.
-     * @return NDEF Message
-     */
-    public static NdefRecord getNdefTextRecord(String payloadString, String id) {
-        byte[] payloadBytes = payloadString.getBytes();
-        int textLength = payloadBytes.length;
-        byte[] payload = new byte[1 + textLength];
-        System.arraycopy(payloadBytes, 0, payload, 1, textLength);
-        NdefRecord record = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
-                NdefRecord.RTD_TEXT, id.getBytes(), payload);
-        return record;
-    }
-
 
     public static byte[] getMetadataRecordPayloadBytes(String macAddress, String timestamp){
         long timestampAsNumber = Long.parseLong(timestamp);
@@ -97,18 +77,14 @@ public class NtagUtil {
     }
 
     public static NdefRecord appendNewMetadataPayload(byte[] oldPayload, byte[] newMeasurementData){
-        byte[] idBytes = new byte[1];
-        idBytes[0] = new Integer(1).byteValue();
         byte[] newPayload = new byte[oldPayload.length + newMeasurementData.length];
         System.arraycopy(oldPayload,0,newPayload,0,oldPayload.length);
         System.arraycopy(newMeasurementData,0,newPayload,oldPayload.length,newMeasurementData.length);
-        return new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, idBytes,newPayload);
+        return createNewRecord(RecordId.MD.toString(),newPayload);
     }
 
-    public static NdefRecord createNewRecord(Integer id, byte[] newMeasurementData){
-        byte[] idBytes = new byte[1];
-        idBytes[0] = new Integer(id).byteValue();
-        return new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT,idBytes,newMeasurementData);
+    public static NdefRecord createNewRecord(String id, byte[] newMeasurementData){
+        return new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT,id.getBytes(),newMeasurementData);
     }
 
     public static byte[] convertHexStringToByteArray(String hexString){
@@ -117,7 +93,7 @@ public class NtagUtil {
         byte[] byteArray = new byte[amountOfBytes];
         int hexStringCounter = 0;
         for(int i = 0; i < amountOfBytes; i++) {
-            String byteString = String.valueOf(stringAsChar[hexStringCounter] + String.valueOf(stringAsChar[hexStringCounter + 1]));
+            String byteString = stringAsChar[hexStringCounter] + String.valueOf(stringAsChar[hexStringCounter + 1]);
             Integer hex = Integer.parseInt(byteString, 16);
             hexStringCounter = hexStringCounter + 2;
             byteArray[i] = hex.byteValue();
