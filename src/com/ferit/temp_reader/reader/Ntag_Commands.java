@@ -45,12 +45,12 @@ public class Ntag_Commands {
 	 * current Sector in which the Tag is.
 	 */
 	private byte currentSec;
-	private int sectorSelectTimout;
+	private final int sectorSelectTimout;
 	private final int timeout = 20;
 
 	private byte[] answer;
 	private byte[] command;
-	private NfcA nfca;
+	private final NfcA nfca;
 
 	/**
 	 * Constructor connects the Tag also.

@@ -83,11 +83,11 @@ public class ListFragment extends Fragment {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        this.measuredTemperatures = new LinkedList<Temperature>();
+        measuredTemperatures = new LinkedList<Temperature>();
         View v = inflater.inflate(R.layout.fragment_list, container, false);
         tempCallback = (TextView) v.findViewById(R.id.tempCallback);
         mListView = (ListView) v.findViewById(R.id.list);
-        adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, this.measuredTemperatures);
+        adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, measuredTemperatures);
         mListView.setAdapter(adapter);
         try {
             File dir = new File(filesDir, "temperatures");

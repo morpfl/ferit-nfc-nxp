@@ -41,7 +41,7 @@ public class GraphFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        this.measuredTemperatures = new LinkedList<Double>();
+        measuredTemperatures = new LinkedList<Double>();
         setRetainInstance(true);
     }
 
@@ -55,13 +55,13 @@ public class GraphFragment extends Fragment {
                 JSONObject jsonObject = (JSONObject) temps.get(i);
                 String tempAsString = (String) jsonObject.get("tempValue");
                 String tempStringWithDot = tempAsString.replace(",",".");
-                this.measuredTemperatures.add(Double.parseDouble(tempStringWithDot));
+                measuredTemperatures.add(Double.parseDouble(tempStringWithDot));
             }
         } catch (ParseException e) {
             e.printStackTrace();
         }
         graph = (GraphView) v.findViewById(R.id.graph);
-        if(this.measuredTemperatures.size() > 0){
+        if(measuredTemperatures.size() > 0){
             series = new LineGraphSeries<>(convertToDataPointArray());
             graph.addSeries(series);
         }
@@ -69,17 +69,17 @@ public class GraphFragment extends Fragment {
         graph.getGridLabelRenderer().setVerticalAxisTitle("temperature");
         graph.getGridLabelRenderer().setHorizontalAxisTitle("measurements");
         graph.getViewport().setMinX(0);
-        graph.getViewport().setMaxX(this.measuredTemperatures.size());
-        graph.getGridLabelRenderer().setNumHorizontalLabels(this.measuredTemperatures.size()+1);
+        graph.getViewport().setMaxX(measuredTemperatures.size());
+        graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
         graph.getViewport().setXAxisBoundsManual(true);
         return v;
     }
 
     private DataPoint[] convertToDataPointArray(){
-        int count = this.measuredTemperatures.size();
+        int count = measuredTemperatures.size();
         DataPoint[] array = new DataPoint[count];
         for(int i = 0; i < array.length; i++){
-            array[i] = new DataPoint(i, this.measuredTemperatures.get(i));
+            array[i] = new DataPoint(i, measuredTemperatures.get(i));
         }
         return array;
     }

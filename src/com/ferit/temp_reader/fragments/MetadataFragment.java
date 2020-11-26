@@ -36,7 +36,7 @@ public class MetadataFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_metadata, container, false);
         readButton = v.findViewById(R.id.button_read_metadata);
         metadataView = (ListView) v.findViewById(R.id.metadataList);
-        adapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, this.metadata);
+        adapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, metadata);
         metadataView.setAdapter(adapter);
         infoText = (TextView) v.findViewById(R.id.infoText);
         readButton.setOnClickListener(new View.OnClickListener() {

@@ -53,10 +53,10 @@ import com.ferit.temp_reader.reader.Ntag_Get_Version.Prod;
 public class MinimalNtag_I2C_Commands extends I2C_Enabled_Commands {
 
 	private final int firstSectorMemsize = (0xFF - 0x4) * 4;
-	private MifareUltralight mfu;
-	private Prod tagType;
+	private final MifareUltralight mfu;
+	private final Prod tagType;
 	private byte[] answer;
-	private static int waitTime = 20;
+	private static final int waitTime = 20;
 
 	/**
 	 * Special Registers of the NTAG I2C.
@@ -66,8 +66,8 @@ public class MinimalNtag_I2C_Commands extends I2C_Enabled_Commands {
 		Session((byte) 0xF8), Configuration((byte) 0xE8), SRAM_Begin(
 				(byte) 0xF0), User_memory_Begin((byte) 0x04), UID((byte) 0x00);
 
-		private byte value;
-		private Register(byte value) {
+		private final byte value;
+		Register(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {

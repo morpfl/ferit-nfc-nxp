@@ -218,8 +218,8 @@ public abstract class I2C_Enabled_Commands {
 				(byte) (0x01 << 2)), SRAM_RF_READY((byte) (0x01 << 3)), SRAM_I2C_READY(
 				(byte) (0x01 << 4)), RF_LOCKED((byte) (0x01 << 5)), I2C_LOCKED(
 				(byte) (0x01 << 6)), NDEF_DATA_READ((byte) (0x01 << 7)), ;
-		private byte value;
-		private NS_Reg_Func(byte value) {
+		private final byte value;
+		NS_Reg_Func(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {
@@ -235,8 +235,8 @@ public abstract class I2C_Enabled_Commands {
 		PTHRU_DIR((byte) (0x01 << 0)), SRAM_MIRROR_ON_OFF((byte) (0x01 << 1)), FD_ON(
 				(byte) (0x03 << 2)), FD_OFF((byte) (0x03 << 4)), PTHRU_ON_OFF(
 				(byte) (0x01 << 6)), I2C_RST_ON_OFF((byte) (0x01 << 7)), ;
-		private byte value;
-		private NC_Reg_Func(byte value) {
+		private final byte value;
+		NC_Reg_Func(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {
@@ -252,8 +252,8 @@ public abstract class I2C_Enabled_Commands {
 		NC_REG((byte) 0x00), LAST_NDEF_PAGE((byte) 0x01), SM_REG((byte) 0x02), WDT_LS(
 				(byte) 0x03), WDT_MS((byte) 0x04), I2C_CLOCK_STR((byte) 0x05), REG_LOCK(
 				(byte) 0x06), FIXED((byte) 0x07);
-		private byte value;
-		private CR_Offset(byte value) {
+		private final byte value;
+		CR_Offset(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {
@@ -270,8 +270,8 @@ public abstract class I2C_Enabled_Commands {
 				(byte) 0x03), WDT_MS((byte) 0x04), I2C_CLOCK_STR((byte) 0x05), NS_REG(
 				(byte) 0x06), FIXED((byte) 0x07);
 
-		private byte value;
-		private SR_Offset(byte value) {
+		private final byte value;
+		SR_Offset(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {
@@ -285,8 +285,8 @@ public abstract class I2C_Enabled_Commands {
 	 */
 	public enum Access_Offset {
 		NFC_PROT((byte) 0x07), NFC_DIS_SEC1((byte) 0x05), AUTH_LIM((byte) 0x00);
-		private byte value;
-		private Access_Offset(byte value) {
+		private final byte value;
+		Access_Offset(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {
@@ -300,8 +300,8 @@ public abstract class I2C_Enabled_Commands {
 	 */
 	public enum PT_I2C_Offset {
 		K2_PROT((byte) 0x03), SRAM_PROT((byte) 0x02), I2C_PROT((byte) 0x00);
-		private byte value;
-		private PT_I2C_Offset(byte value) {
+		private final byte value;
+		PT_I2C_Offset(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {

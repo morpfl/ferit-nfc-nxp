@@ -51,7 +51,7 @@ public class TemperatureSeriesFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        this.measuredTemperatures = new LinkedList<Temperature>();
+        measuredTemperatures = new LinkedList<Temperature>();
         setRetainInstance(true);
     }
 
@@ -160,7 +160,7 @@ public class TemperatureSeriesFragment extends Fragment {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        if(this.measuredTemperatures.size() > 0){
+        if(measuredTemperatures.size() > 0){
             series = new LineGraphSeries<>(convertToDataPointArray());
             adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, measuredTemperatures);
             adapter.notifyDataSetChanged();
@@ -173,14 +173,14 @@ public class TemperatureSeriesFragment extends Fragment {
         graph.getGridLabelRenderer().setVerticalAxisTitle("temperature");
         graph.getGridLabelRenderer().setHorizontalAxisTitle("measurements");
         graph.getViewport().setMinX(0);
-        graph.getViewport().setMaxX(this.measuredTemperatures.size());
-        graph.getGridLabelRenderer().setNumHorizontalLabels(this.measuredTemperatures.size()+1);
+        graph.getViewport().setMaxX(measuredTemperatures.size());
+        graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
         graph.getViewport().setXAxisBoundsManual(true);
         graph.onDataChanged(false, false);
     }
 
     private DataPoint[] convertToDataPointArray(){
-        int count = this.measuredTemperatures.size();
+        int count = measuredTemperatures.size();
         DataPoint[] array = new DataPoint[count];
         for(int i = 0; i < array.length; i++){
             String tempStringWithDot = measuredTemperatures.get(i).getTemperatureValue().replace(",",".");

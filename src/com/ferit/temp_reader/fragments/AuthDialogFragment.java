@@ -19,7 +19,7 @@ public class AuthDialogFragment extends DialogFragment {
     private EditText password;
 
     public interface NoticeDialogListener {
-        void onDialogPositiveClick(String password) throws NoSuchAlgorithmException;;
+        void onDialogPositiveClick(String password) throws NoSuchAlgorithmException;
     }
 
     NoticeDialogListener listener;

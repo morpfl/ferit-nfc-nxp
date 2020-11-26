@@ -7,5 +7,5 @@ public interface WriteEEPROMListener {
 	 * 
 	 * @param bytes
 	 */
-    public abstract void onWriteEEPROM(int bytes);
+    void onWriteEEPROM(int bytes);
 }

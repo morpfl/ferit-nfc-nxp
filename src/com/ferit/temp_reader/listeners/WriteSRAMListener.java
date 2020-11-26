@@ -6,5 +6,5 @@ public interface WriteSRAMListener {
 	 * Used to inform about the progress during the SpeedTest
 	 *
 	 */
-    public abstract void onWriteSRAM();
+    void onWriteSRAM();
 }

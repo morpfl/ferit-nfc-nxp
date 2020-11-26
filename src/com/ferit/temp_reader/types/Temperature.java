@@ -4,8 +4,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 public class Temperature implements Parcelable {
-    private String timestamp;
-    private String temperatureValue;
+    private final String timestamp;
+    private final String temperatureValue;
     private boolean seriesTemp;
 
     public Temperature(String timestamp, String temperatureValue, boolean seriesTemp){

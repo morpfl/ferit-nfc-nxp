@@ -187,7 +187,7 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		if (mAdapter != null) {
 			mAdapter.enableForegroundDispatch(this, mPendingIntent, null, null);
 		}
-		if(this.authStatus.equals(AuthStatus.AUTHENTICATED)){
+		if(authStatus.equals(AuthStatus.AUTHENTICATED)){
 			authItem.setIcon(R.drawable.unlock);
 		}
 	}
@@ -215,7 +215,7 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		super.onNewIntent(nfc_intent);
 		tag = nfc_intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 		// Set the pattern for vibration
-		long pattern[] = { 0, 100 };
+		long[] pattern = { 0, 100 };
 
 		if(mTabHost.getCurrentTabTag().equals("series")) {
 			final Handler handler = new Handler();
@@ -268,11 +268,11 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		Intent intent = null;
 		switch (item.getItemId()) {
 			case R.id.action_new:
-				if(authStatus.equals(AuthStatus.UNAUTHENTICATED)){
+				/*if(authStatus.equals(AuthStatus.UNAUTHENTICATED)){
 					DialogFragment newFragment = new AuthDialogFragment();
 					newFragment.show(getSupportFragmentManager(), "auth");
 					break;
-				}
+				}*/
 				intent = new Intent(this, ReadTempActivity.class);
 				break;
 			case R.id.action_reset:

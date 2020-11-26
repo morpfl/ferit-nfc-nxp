@@ -57,13 +57,13 @@ public class Ntag_I2C_Commands extends I2C_Enabled_Commands {
 	private static final int SRAM_SIZE = 64;
 	private static final int SRAM_BLOCK_SIZE = 4;
 
-	private Ntag_Commands reader;
-	private Tag tag;
+	private final Ntag_Commands reader;
+	private final Tag tag;
 	private byte[] answer;
 	private Ntag_Get_Version getVersionResponse;
-	private byte sramSector;
-	private boolean TimeOut = false;
-	private Object lock = new Object();
+	private final byte sramSector;
+	private final boolean TimeOut = false;
+	private final Object lock = new Object();
 
 	/**
 	 * Special Registers of the NTAG I2C.
@@ -73,8 +73,8 @@ public class Ntag_I2C_Commands extends I2C_Enabled_Commands {
 		Session((byte) 0xF8), Session_PLUS((byte) 0xEC), Configuration((byte) 0xE8), SRAM_Begin((byte) 0xF0), 
 		Capability_Container((byte) 0x03), User_memory_Begin((byte) 0x04), UID((byte) 0x00),
 		AUTH0((byte) 0xE3), ACCESS((byte) 0xE4), PWD((byte) 0xE5), PACK((byte) 0xE6), PT_I2C((byte) 0xE7);
-		private byte value;
-		private Register(byte value) {
+		private final byte value;
+		Register(byte value) {
 			this.value = value;
 		}
 		public byte getValue() {
@@ -1122,10 +1122,6 @@ public class Ntag_I2C_Commands extends I2C_Enabled_Commands {
 		}
 
 		byte ns_reg = getSessionRegister(SR_Offset.NS_REG);
-		if ((ns_reg & NS_Reg_Func.RF_LOCKED.getValue()) == 0) {
-			return false;
-		}
-
-		return true;
-	}
+        return (ns_reg & NS_Reg_Func.RF_LOCKED.getValue()) != 0;
+    }
 }

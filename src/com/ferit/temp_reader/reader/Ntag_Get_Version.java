@@ -41,9 +41,9 @@ public class Ntag_Get_Version {
 		NTAG_I2C_1k_Plus(888), NTAG_I2C_2k_Plus(1912), 
 		Unknown(0), MTAG_I2C_1k(720), MTAG_I2C_2k(1440);
 
-		private int mem_size;
+		private final int mem_size;
 
-		private Prod(int mem_size) {
+		Prod(int mem_size) {
 			this.mem_size = mem_size;
 		}
 
@@ -57,13 +57,13 @@ public class Ntag_Get_Version {
 		}
 	}
 
-	private byte vendor_ID;
-	private byte product_type;
-	private byte product_subtype;
-	private byte major_product_version;
-	private byte minor_product_version;
-	private byte storage_size;
-	private byte protocol_type;
+	private final byte vendor_ID;
+	private final byte product_type;
+	private final byte product_subtype;
+	private final byte major_product_version;
+	private final byte minor_product_version;
+	private final byte storage_size;
+	private final byte protocol_type;
 
 	/**
 	 * Get version Response of a NTAG_I2C_1K.
@@ -168,17 +168,13 @@ public class Ntag_Get_Version {
 			return false;
 		}
 		Ntag_Get_Version temp = (Ntag_Get_Version) other;
-		
-		if (temp.vendor_ID == this.vendor_ID
-				&& temp.product_type == this.product_type
-				&& temp.product_subtype == this.product_subtype
-				&& temp.major_product_version == this.major_product_version
-				&& temp.minor_product_version == this.minor_product_version
-				&& temp.storage_size == this.storage_size) {
-			return true;
-		} else {
-			return false;
-		}
+
+        return temp.vendor_ID == this.vendor_ID
+                && temp.product_type == this.product_type
+                && temp.product_subtype == this.product_subtype
+                && temp.major_product_version == this.major_product_version
+                && temp.minor_product_version == this.minor_product_version
+                && temp.storage_size == this.storage_size;
 	}
 
 	/**

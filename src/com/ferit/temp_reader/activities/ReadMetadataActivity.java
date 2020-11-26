@@ -72,7 +72,7 @@ public class ReadMetadataActivity extends Activity {
     protected void onNewIntent(Intent nfc_intent) {
         super.onNewIntent(nfc_intent);
         // Set the pattern for vibration
-        long pattern[] = { 0, 100 };
+        long[] pattern = { 0, 100 };
 
         // Vibrate on new Intent
         Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);

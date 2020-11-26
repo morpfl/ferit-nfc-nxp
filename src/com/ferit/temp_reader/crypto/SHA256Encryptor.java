@@ -11,7 +11,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 public class SHA256Encryptor {
-    private String saltString;
+    private final String saltString;
 
     public SHA256Encryptor(){
         this.saltString = "4739dgksl939JD39";
