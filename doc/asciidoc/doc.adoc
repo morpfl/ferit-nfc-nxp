@@ -7,42 +7,85 @@
 * SDK-Build-Tools-Version: 29.0.2
 * GraphView-Version: 4.2.2
 
-== application structure
-* *MainActivity* +
+== 1 application structure
+=== 1.1 activities
+==== 1.1.1 MainActivity
 The main activity contains the tab view to switch between the List and the Graph Fragment. Furthermore, it gives access to the menu, that triggers the TemperatureReadingActivity or the task to reset the data.
 If a new data point gets measured, it is added to both fragments immediately.
 
-** *ListFragment* +
-The list fragment lists all temperatures that have been measured. Additionally, it shows a timestamp for each measurement.
-** *GraphFragment* +
-The graph fragment plots all measured temperatures in a line graph. Therefore it uses the GraphView library. 
-** *TemperatureSeriesFragment* +
-This fragment allows the user to measure and plot the temperature in real time, given an interval size. The data doesn't get stored during the measurement. The user has the option to store it afterwards on the device storage and on the tag. 
-* *TemperatureReadingActivity* +
+==== 1.1.2 TemperatureReadingActivity
 This activity reads the current temperature of the sensor. It uses the Ntag_I2C_Demo class that defines a specific subclass for this task.
 
-* *ResetActivity* +
-The ResetActivity removes all measured temperatures from the device storage. On the tag it restores the default NdefMessage with a ct-record of 0 and no id-records. Due to the fact that the default message always uses less bytes than the one to be removed, some old data might stay in the storage until it gets overwritten. This old data is not part of the new NDEF message hence it doesn't corrupt the application state.
+==== 1.1.3 ResetActivity
+The ResetActivity removes all measured temperatures from the device storage. On the tag it restores the default NdefMessage with a CT-record of 0 and no MD-records. Due to the fact that the default message always uses less bytes than the one to be removed, some old data might stay in the storage until it gets overwritten. This old data is not part of the new NDEF message hence it doesn't corrupt the application state.
 
-== memory access, data exchange & authentication
-=== temperature sensor
-If the tag has a connection to a NFC reader (i.e the phone), it powers the chip and the temperature sensor. The value of the sensor gets written into the SRAM-memory in real time. 
+=== 1.2 fragments
+==== 1.2.1 ListFragment 
+The list fragment lists all temperatures that have been measured. Additionally, it shows a timestamp for each measurement.
 
-=== temperature values
-Once a temperature has been read out of the SRAM, it gets written to the internal storage of the phone. (path: /data/data/com.ferit.temp_reader/temperatures/temperatures.json). Both fragments read out the data when they create their view. Additionally, and id-record will be created for this measurement and written to the tag.
+==== 1.2.2 GraphFragment
+The graph fragment plots all measured temperatures in a line graph. Therefore it uses the GraphView library.
 
-=== NDEF message
-The tag has a single ndef message with several records. Every record has one of the following ids:
+==== 1.2.3 TemperatureSeriesFragment
+This fragment allows the user to measure and plot the temperature in real time, given an interval size. The data doesn't get stored during the measurement to increase the performance. 
+
+==== 1.2.4 MetadataFragment
+In the metadata fragment the user has the option to read out the metadata that is stored on the tag. If a tag gets discovered, the application reads out the MD-Record of the NDEF message. Due to the specification that one (uid-timestamp)-pair is 11 Bytes long, the record payload gets splitted up in order to create the view. 6 Bytes are used by the mac address, 5 bytes are used by the timestamp that has the format 010101111111 for 01.01.2001 - 11:11:11.
+
+
+== 2 memory, data exchange & authentication
+=== 2.1 memory access
+==== 2.1.1 NDEF
+The Ntag memory stores metadata relating to the measurements. To access the memory via NFC in Android, the NDEF-Format is used. Hence the tag contains a single NDEF message with 3 TXT-records having the following ids.
 
 * ps: This record stores the hashed pass_id. (SHA256)
 * ct: This record stores the amount of temperature measurements
-* id: Every measurement has a record with this id. It stores a unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement.
+* md: This record stores the metadata of the measurements. It consists of a    unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement.
 
-=== authentication
+Additional to the TXT-Record, the tag contains one AAR-Record. It contains the package name to ensure that the app will be started if a tag has been detected.
+
+==== 2.1.2 memory management
+In order to store as much metadata on the tag as possible, the following determinations has been made:
+
+|===
+|Record |Bytes RecID | Bytes Payload | total
+
+|PS
+|4
+|45
+|49
+
+|AAR
+|0
+|34
+|34
+
+|CT
+|4
+|4
+|8
+
+|MD
+|4
+|11 * #measurements
+|4 + 11 * #measurements
+
+|===
+
+Considering the table above, a total EEPROM memory of 2kByte and a reservation of 10 Bytes for padding, the metadata of 176 measurements can be stored. 
+
+==== 2.1.3 temperature sensor
+If the tag has a connection to a NFC reader (i.e the phone), it powers the chip and the temperature sensor. The value of the sensor gets written into the SRAM-memory in real time. 
+
+==== 2.1.4 temperature values
+Once a temperature has been read out of the SRAM, it gets written to the internal storage of the phone. (path: /data/data/com.ferit.temp_reader/temperatures/temperatures.json). Both fragments read out the data when they create their view. Additionally, the MD-record will be extended for this measurement and updated on the tag.
+
+=== 2.2 authentication
 If the user chooses the authenticate option in the app menu or tries to read out the temperature for the first time, he will be asked to type in the chip password. +
 password: pass157 +
-The password gets hashed with the SHA256 algorithm. The related salt value needs to stay the same and is stored in the SHA256Encryptor class. Both hashes, the one of the typed password and the one in the EEPROM memory of the tag will get compared. If they are the same, the user is authenticated and can read the data from the tag during the app session.
+The password gets hashed with the SHA256 algorithm. The related salt value needs to stay the same and is stored in the SHA256Encryptor class. Both hashes, the one of the typed password and the one in the EEPROM memory (payload of the PS-record) of the tag will get compared. If they are the same, the user is authenticated and can read the data from the tag during the app session.
 
-== Issues
+
+== 3 Issues
 * *increasing measurement time* +
-If a new temperature has been measured, and id-record gets created and stored to the tag. To add a new record, the whole NDEF message has to be read out, modified and written back. With the increasing number of measurements, the number of id-records increases as well as the size of the message. It takes more time to write the message to the chip which results in a longer measurement time.
+If a new temperature has been measured, and id-record gets created and stored to the tag. To add a new record, the whole NDEF message has to be read out, modified and written back. With the increasing number of measurements, the payload of the MD-record increases as well as the size of the message. It takes more time to write the message to the chip which results in a longer measurement time.
