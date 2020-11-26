@@ -49,7 +49,7 @@ public class NtagUtil {
     public static NdefMessage createDefaultNdefMessage(String tagHash)
             throws IOException {
         String passId = "ps";
-        String countId = "ct";
+        Integer countId = 2;
         byte[] textBytes = tagHash.getBytes();
         int textLength = textBytes.length;
         byte[] payload = new byte[1 + textLength];
@@ -57,7 +57,7 @@ public class NtagUtil {
         NdefRecord pass = new NdefRecord(NdefRecord.TNF_WELL_KNOWN,
                 NdefRecord.RTD_TEXT, passId.getBytes(), payload);
         NdefRecord aar = NdefRecord.createApplicationRecord("com.ferit.temp_reader");
-        NdefRecord countRec = getNdefTextRecord("0",countId);
+        NdefRecord countRec = createNewRecord(countId, new byte[4]);
         NdefRecord[] records = { pass,aar,countRec };
         NdefMessage message = new NdefMessage(records);
         return message;
@@ -90,15 +90,8 @@ public class NtagUtil {
             Integer hex = Integer.parseInt(macAddressParts[i],16);
             payloadBytes[i] = hex.byteValue();
         }
-        char[] timestampHexStringArray = Long.toHexString(timestampAsNumber).toCharArray();
-        byte[] timestampBytes = new byte[bytesTs];
-        int hexStringCounter = 0;
-        for(int i = 0; i < timestampBytes.length; i++){
-            String byteString = String.valueOf(timestampHexStringArray[hexStringCounter]) + String.valueOf(timestampHexStringArray[hexStringCounter+1]);
-            Integer hex = Integer.parseInt(byteString,16);
-            hexStringCounter=hexStringCounter+2;
-            timestampBytes[i] = hex.byteValue();
-        }
+
+        byte[] timestampBytes = convertHexStringToByteArray(Long.toHexString(timestampAsNumber));
         System.arraycopy(timestampBytes, 0, payloadBytes,bytesMac,bytesTs);
         return payloadBytes;
     }
@@ -112,9 +105,23 @@ public class NtagUtil {
         return new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, idBytes,newPayload);
     }
 
-    public static NdefRecord createNewMetadataRecord(byte[] newMeasurementData){
+    public static NdefRecord createNewRecord(Integer id, byte[] newMeasurementData){
         byte[] idBytes = new byte[1];
-        idBytes[0] = new Integer(1).byteValue();
+        idBytes[0] = new Integer(id).byteValue();
         return new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT,idBytes,newMeasurementData);
+    }
+
+    public static byte[] convertHexStringToByteArray(String hexString){
+        char[] stringAsChar = hexString.toCharArray();
+        int amountOfBytes = Math.round(hexString.length() / 2);
+        byte[] byteArray = new byte[amountOfBytes];
+        int hexStringCounter = 0;
+        for(int i = 0; i < amountOfBytes; i++) {
+            String byteString = String.valueOf(stringAsChar[hexStringCounter] + String.valueOf(stringAsChar[hexStringCounter + 1]));
+            Integer hex = Integer.parseInt(byteString, 16);
+            hexStringCounter = hexStringCounter + 2;
+            byteArray[i] = hex.byteValue();
+        }
+        return byteArray;
     }
 }

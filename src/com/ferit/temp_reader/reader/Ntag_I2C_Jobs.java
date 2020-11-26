@@ -629,7 +629,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		}
 		else{
 			byte[] payload = NtagUtil.getMetadataRecordPayloadBytes(mac,timestamp);
-			NdefRecord newRecord = NtagUtil.createNewMetadataRecord(payload);
+			NdefRecord newRecord = NtagUtil.createNewRecord(1, payload);
 			NdefRecord[] newRecords = new NdefRecord[message.getRecords().length + 1];
 			System.arraycopy(message.getRecords(),0,newRecords,0,message.getRecords().length);
 			newRecords[newRecords.length - 1] = newRecord;
@@ -638,23 +638,30 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		}
 	}
 
+	@RequiresApi(api = Build.VERSION_CODES.N)
 	private void increaseCountRecord() throws CommandNotSupportedException, FormatException, IOException {
 		NdefMessage message = reader.readNDEF();
 		NdefRecord[] records = message.getRecords();
-		for(int i = 0; i < records.length; i++){
-			if(new String(records[i].getId()).equals("ct")){
-				char[] payload = new String(records[i].getPayload()).toCharArray();
-				char[] countCharArray = new char[payload.length - 1];
-				System.arraycopy(payload,1,countCharArray,0,payload.length - 1);
-				String countString = new String(countCharArray);
-				Integer payloadAsNumber = Integer.parseInt(countString);
-				payloadAsNumber = payloadAsNumber + 1;
-				NdefRecord countRecUpdated = NtagUtil.getNdefTextRecord(String.valueOf(payloadAsNumber), "ct");
-				records[i] = countRecUpdated;
-				break;
-			}
+		List<NdefRecord> recordsAsList = Arrays.asList(records);
+		Optional<NdefRecord> countRecordOpt = recordsAsList.stream()
+				.filter(record -> record.getId()[0] == new Integer(2).byteValue())
+				.findFirst();
+		if(!countRecordOpt.isPresent()){
+			return;
 		}
-		NdefMessage updatedMessage = new NdefMessage(records);
+		NdefRecord countRecord = countRecordOpt.get();
+		String countAsHex = "";
+		for(int byteCount = 0; byteCount < countRecord.getPayload().length; byteCount++){
+			Byte currentByte = countRecord.getPayload()[byteCount];
+			Integer intValue = Integer.parseInt(currentByte.toString());
+			countAsHex = countAsHex.concat(Integer.toHexString(intValue));
+		}
+		System.out.println("count as hex" + countAsHex);
+		Integer newCountAsInt = Integer.parseInt(countAsHex,16) + 1;
+		byte[] newPayloadForRecord = NtagUtil.convertHexStringToByteArray(Integer.toHexString(newCountAsInt));
+		NdefRecord updatedRecord = NtagUtil.createNewRecord(2, newPayloadForRecord);
+		recordsAsList.set(recordsAsList.indexOf(countRecord),updatedRecord);
+		NdefMessage updatedMessage = new NdefMessage((NdefRecord[]) recordsAsList.toArray());
 		reader.writeNDEF(updatedMessage, this);
 	}
 }
