@@ -468,7 +468,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 	public class GetMetadataTask extends AsyncTask<Void, String, NdefMessage> {
 		private final List<String> metadataStrings = new LinkedList<String>();
 		private boolean noMetadataAvailable = false;
-		// index declarations, see memory design chapter in documentation for further information.
+		// index declarations, see memory design chapter in documentation
 		private final int METADATA_RECORD_SIZE = 11;
 		private final int MAC_ADDRESS_LAST_INDEX = 5;
 		private final int TIMESTAMP_LAST_INDEX = 10;
@@ -513,7 +513,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 					else {
 						hexString = String.valueOf(hexCharAr);
 					}
-					// determine the content of the byte, see memory design in documentation for further information.
+					// determine the content of the byte, see memory design in documentation
 					if((currentByteNumber % METADATA_RECORD_SIZE) == 0) {
 						mac = "";
 						timestamp = "";
