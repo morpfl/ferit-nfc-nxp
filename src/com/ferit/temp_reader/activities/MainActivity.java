@@ -75,7 +75,7 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 	private PendingIntent mPendingIntent;
 	private NfcAdapter mAdapter;
 	private static MenuItem authItem;
-	private static AuthStatus authStatus;
+	public static AuthStatus authStatus;
 	public static String PACKAGE_NAME;
 	private Tag tag;
 
@@ -268,11 +268,11 @@ public class MainActivity extends FragmentActivity implements AuthDialogFragment
 		Intent intent = null;
 		switch (item.getItemId()) {
 			case R.id.action_new:
-				/*if(authStatus.equals(AuthStatus.UNAUTHENTICATED)){
+				if(authStatus.equals(AuthStatus.UNAUTHENTICATED)){
 					DialogFragment newFragment = new AuthDialogFragment();
 					newFragment.show(getSupportFragmentManager(), "auth");
 					break;
-				}*/
+				}
 				intent = new Intent(this, ReadTempActivity.class);
 				break;
 			case R.id.action_reset:

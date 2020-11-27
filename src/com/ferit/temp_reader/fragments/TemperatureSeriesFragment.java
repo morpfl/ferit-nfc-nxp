@@ -6,6 +6,7 @@ import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,8 +19,11 @@ import android.widget.TextView;
 
 import com.ferit.temp_reader.R;
 import com.ferit.temp_reader.activities.AddSeriesActivity;
+import com.ferit.temp_reader.activities.MainActivity;
+import com.ferit.temp_reader.fragments.ListFragment;
 import com.ferit.temp_reader.reader.Ntag_I2C_Jobs;
 import com.ferit.temp_reader.types.Temperature;
+import com.ferit.temp_reader.util.AuthStatus;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
@@ -119,6 +123,11 @@ public class TemperatureSeriesFragment extends Fragment {
     }
 
     private void startSeriesMeasurement() throws IOException, FormatException, InterruptedException {
+        if(MainActivity.authStatus.equals(AuthStatus.UNAUTHENTICATED)){
+            DialogFragment newFragment = new AuthDialogFragment();
+            newFragment.show(getActivity().getSupportFragmentManager(), "auth");
+            return;
+        }
         Ntag_I2C_Jobs demo = new Ntag_I2C_Jobs(tag, getActivity());
         int intervalNumber = interval.getText().toString().equals("") ? 0 : Integer.parseInt(interval.getText().toString());
         demo.temp(true, intervalNumber);

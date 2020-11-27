@@ -23,12 +23,13 @@ public class ReadMetadataActivity extends Activity {
     private I2C_Enabled_Commands reader;
     private PendingIntent pendingIntent;
     private static Intent mIntent;
+    private String mac;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_readtemp);
-
+        mac = getIntent().getStringExtra("mac");
         // Capture intent to check whether the operation should be automatically launch or not
         Tag tag = getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
         // && demo.isTagPresent(tag)
@@ -98,6 +99,6 @@ public class ReadMetadataActivity extends Activity {
     }
 
     private void startDemo() throws IOException, InterruptedException, FormatException {
-        demo.readMetadata();
+        demo.readMetadata(mac);
     }
 }

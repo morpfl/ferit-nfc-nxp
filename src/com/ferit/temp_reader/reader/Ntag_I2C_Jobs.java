@@ -184,6 +184,9 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 
 		@Override
 		protected Void doInBackground(Void... params) {
+			if(!isReady()){
+				cancel(true);
+			}
 			byte[] dataTx = new byte[reader.getSRAMSize()];
 			byte[] dataRx = new byte[reader.getSRAMSize()];
 			Byte[][] result;
@@ -457,8 +460,8 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		}
 	}
 
-	public void readMetadata(){
-		GetMetadataTask metadataTask = new GetMetadataTask();
+	public void readMetadata(String mac){
+		GetMetadataTask metadataTask = new GetMetadataTask(mac);
 		metadataTask.execute();
 	}
 
@@ -469,6 +472,11 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		private final int METADATA_RECORD_SIZE = 11;
 		private final int MAC_ADDRESS_LAST_INDEX = 5;
 		private final int TIMESTAMP_LAST_INDEX = 10;
+		private String mac;
+
+		public GetMetadataTask(String mac) {
+			this.mac = mac;
+		}
 
 		@RequiresApi(api = Build.VERSION_CODES.N)
 		@Override
@@ -522,7 +530,12 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 					if((currentByteNumber % METADATA_RECORD_SIZE) == TIMESTAMP_LAST_INDEX){
 						Long timestampLong = Long.parseLong(timestamp,16);
 						String formattedForView = NtagUtil.formatMetadata(mac, String.valueOf(timestampLong));
-						metadataStrings.add(formattedForView);
+						if(this.mac.equals("")){
+							metadataStrings.add(formattedForView);
+						}
+						else if(mac.equals(this.mac)){
+							metadataStrings.add(formattedForView);
+						}
 					}
 				}
 			} catch (IOException e) {
