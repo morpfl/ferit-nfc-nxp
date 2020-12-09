@@ -32,8 +32,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class GraphFragment extends Fragment {
-
-    private static TextView exampleText;
     private static List<Double> measuredTemperatures;
     public static GraphView graph;
     public static LineGraphSeries<DataPoint> series;
@@ -49,6 +47,7 @@ public class GraphFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_graph, container, false);
+        measuredTemperatures.clear();
         try {
             JSONArray temps = ListFragment.getTempsFromFile();
             for(int i = 0; i < temps.size(); i++){
