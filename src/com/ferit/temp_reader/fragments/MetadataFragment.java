@@ -75,8 +75,10 @@ public class MetadataFragment extends Fragment {
     }
 
     public static void resetMetadata(){
-        metadata.clear();
-        adapter.notifyDataSetChanged();
+        if(metadata != null && adapter != null){
+            metadata.clear();
+            adapter.notifyDataSetChanged();
+        }
     }
 
 
