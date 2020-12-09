@@ -63,6 +63,8 @@ public class TemperatureSeriesFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_series, container, false);
+        measuredTemperatures.clear();
+        series = null;
         loadDataButton = v.findViewById(R.id.button_load_existing_data);
         startButton = v.findViewById(R.id.start_button);
         saveButton = v.findViewById(R.id.save);
