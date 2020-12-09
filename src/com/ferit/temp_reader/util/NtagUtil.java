@@ -13,6 +13,10 @@ import java.util.Date;
 public class NtagUtil {
 
     public static String formatMetadata(String mac, String timestamp) throws java.text.ParseException {
+        if(timestamp.length() == 11){
+            String firstChar = "0";
+            timestamp = firstChar.concat(timestamp);
+        }
         DateFormat dateFormatForEEPROM = new SimpleDateFormat("ddMMyyHHmmss");
         DateFormat dateFormatForView = new SimpleDateFormat("dd.MM.yyyy - HH:mm:ss");
         Date date = dateFormatForEEPROM.parse(timestamp);
