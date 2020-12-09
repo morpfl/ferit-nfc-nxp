@@ -1,4 +1,4 @@
-= NFC Temperature Reading App
+= NFC Temperature Reading App - Documentation
 
 == Version Info
 * minSdkVersion: 15
