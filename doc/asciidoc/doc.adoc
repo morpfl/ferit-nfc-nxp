@@ -26,7 +26,7 @@ The ResetActivity removes all measured temperatures from the device storage. On 
 ==== 1.1.4 ReadMetadataActivity
 If a tag gets discovered, the application reads out the md-Record of the NDEF message. Due to the specification (see table below) that one (uid-timestamp)-pair is 11 Bytes long, the record payload gets splitted up in order to create the view. 6 Bytes are used by the mac address, 5 bytes are used by the timestamp that has the format 010101111111 for 01.01.2001 - 11:11:11. Thus every 11 bytes belong to one record. 
 
-=== 1.1.5 GetPassActivity
+==== 1.1.5 GetPassActivity
 This activity is called if the user submits the dialog of the AuthDialogFragment. It starts the GetPassIdTask to get the hashed password from the tag memory and compare it to the inserted one.
 
 === 1.2 fragments
