@@ -10,14 +10,21 @@
 == 1 application structure
 === 1.1 activities
 ==== 1.1.1 MainActivity
-The main activity contains the tab view to switch between the List and the Graph Fragment. Furthermore, it gives access to the menu, that triggers the TemperatureReadingActivity or the task to reset the data.
-If a new data point gets measured, it is added to both fragments immediately.
+The main activity contains the tab view to switch between the List and the Graph Fragment. Furthermore, it gives access to the menu, that triggers the ReadTempActivity or the task to reset the data.
+If a new data point gets measured, it is added to both fragments simultaneously.
 
-==== 1.1.2 TemperatureReadingActivity
-This activity reads the current temperature of the sensor. It uses the Ntag_I2C_Jobs class that defines a specific subclass for this task.
+==== 1.1.2 ReadTempActivity
+This activity reads the current temperature of the sensor. It uses the Ntag_I2C_Jobs class that defines a specific subclass for this task. Within this job, the following additional processes are getting called:
+
+* increase the payload of the ct-record
+* write current metadata to the tag
+* write temperature values to internal device memory
 
 ==== 1.1.3 ResetActivity
-The ResetActivity removes all measured temperatures from the device storage. On the tag it restores the default NdefMessage with a CT-record of 0 and no MD-records. Due to the fact that the default message always uses less bytes than the one to be removed, some old data might stay in the storage until it gets overwritten. This old data is not part of the new NDEF message hence it doesn't corrupt the application state.
+The ResetActivity removes all measured temperatures from the device storage. On the tag it restores the default NdefMessage with a CT-record of 0 and no MD-record. Due to the fact that the default message always uses less bytes than the one to be removed, some old data might stay in the storage until it gets overwritten. This old data is not part of the new NDEF message hence it doesn't corrupt the application state.
+
+==== 1.1.4 ReadMetadataActivity
+If a tag gets discovered, the application reads out the MD-Record of the NDEF message. Due to the specification (see table below) that one (uid-timestamp)-pair is 11 Bytes long, the record payload gets splitted up in order to create the view. 6 Bytes are used by the mac address, 5 bytes are used by the timestamp that has the format 010101111111 for 01.01.2001 - 11:11:11. Hence every 11 bytes belong to one record. 
 
 === 1.2 fragments
 ==== 1.2.1 ListFragment 
@@ -27,10 +34,10 @@ The list fragment lists all temperatures that have been measured. Additionally, 
 The graph fragment plots all measured temperatures in a line graph. Therefore it uses the GraphView library.
 
 ==== 1.2.3 TemperatureSeriesFragment
-This fragment allows the user to measure and plot the temperature in real time, given an interval size. The data doesn't get stored during the measurement to increase the performance. 
+This fragment allows the user to measure and plot the temperature in real time, given an interval size. The data doesn't get stored during the measurement to increase the performance. The fragment triggers the ReadTempActivity with a flag that prevents the additional writing processes.
 
 ==== 1.2.4 MetadataFragment
-In the metadata fragment the user has the option to read out the metadata that is stored on the tag. If a tag gets discovered, the application reads out the MD-Record of the NDEF message. Due to the specification that one (uid-timestamp)-pair is 11 Bytes long, the record payload gets splitted up in order to create the view. 6 Bytes are used by the mac address, 5 bytes are used by the timestamp that has the format 010101111111 for 01.01.2001 - 11:11:11.
+In the metadata fragment the user has either the option to read out all metadata that is stored on the tag or just those belonging to the current device. The fragment triggers the ReadMetadataActivity.
 
 
 == 2 memory, data exchange & authentication
@@ -40,7 +47,7 @@ The Ntag memory stores metadata relating to the measurements. To access the memo
 
 * ps: This record stores the hashed pass_id. (SHA256)
 * ct: This record stores the amount of temperature measurements
-* md: This record stores the metadata of the measurements. It consists of a    unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement.
+* md: This record stores the metadata of the measurements. It consists of a    unique id of the app (i.e the mac address of the phone) and a timestamp of the measurement. There is only one md-record whose payload gets extended in order to save memory.
 
 Additional to the TXT-Record, the tag contains one AAR-Record that hasn't an id. It contains the package name to ensure that the app will be started if a tag has been detected.
 
