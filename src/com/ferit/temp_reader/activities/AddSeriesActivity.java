@@ -110,6 +110,6 @@ public class AddSeriesActivity extends Activity {
     }
 
     private void startDemo() throws IOException, InterruptedException, FormatException {
-        demo.temp(false,0);
+        demo.addSeries(seriesTemperatures);
     }
 }

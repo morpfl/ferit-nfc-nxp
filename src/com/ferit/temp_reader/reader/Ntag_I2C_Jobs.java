@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
@@ -47,6 +48,7 @@ import android.nfc.FormatException;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.Tag;
+import android.nfc.tech.Ndef;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
@@ -149,8 +151,57 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		return tag != null && reader != null;
 	}
 
+	public void addSeries(List<Temperature> temperaturesToAdd){
+		AddSeriesTask task = new AddSeriesTask(temperaturesToAdd, this);
+		task.execute();
+	}
+	private class AddSeriesTask extends AsyncTask<Void, Byte[], Void> {
+		List<Temperature> temperaturesToAdd;
+		private final WriteEEPROMListener listener;
+
+		public AddSeriesTask(List<Temperature> temperaturesToAdd, Ntag_I2C_Jobs ntag_i2C_jobs){
+			this.temperaturesToAdd = temperaturesToAdd;
+			this.listener = ntag_i2C_jobs;
+		}
+		@RequiresApi(api = Build.VERSION_CODES.N)
+		@Override
+		protected Void doInBackground(Void... voids) {
+			try {
+				NdefMessage message = reader.readNDEF();
+				NdefRecord[] records = message.getRecords();
+				NdefRecord[] updatedNdefRecords = records;
+				for(Temperature temperature : temperaturesToAdd){
+					Date date = new SimpleDateFormat("dd.MM.yyyy - HH:mm:ss").parse(temperature.getTimestamp());
+					String dateTag = new SimpleDateFormat("ddMMyyHHmmss").format(date);
+					updatedNdefRecords = appendMetadataToRecord(updatedNdefRecords, dateTag);
+				}
+				List<NdefRecord> recordsWithUpdatedCount = increaseCountRecord(updatedNdefRecords,temperaturesToAdd.size());
+				NdefMessage newMessage = new NdefMessage((NdefRecord[]) recordsWithUpdatedCount.toArray());
+				reader.writeNDEF(newMessage,listener);
+				for(Temperature temperature : temperaturesToAdd){
+					ListFragment.addTempToList(temperature);
+					GraphFragment.addTempToGraph(temperature.getTemperatureValue());
+				}
+			} catch (FormatException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (CommandNotSupportedException e) {
+				e.printStackTrace();
+			} catch (ParseException e) {
+				e.printStackTrace();
+			} catch (JSONException e) {
+				e.printStackTrace();
+			} catch (java.text.ParseException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+	}
+
+
 	/**
-	 * Performs the TEMP Demo
+	 * starts the temperature measurement job
 	 */
 	public void temp(boolean seriesMeasurement, int period) throws IOException, FormatException {
 		// Reset UI
@@ -158,7 +209,7 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		ListFragment.setTemperatureF(0);
 
 		// The demo is executed in a separate thread to let the GUI run
-		tTask = new TemperatureReadTask(seriesMeasurement, period);
+		tTask = new TemperatureReadTask(seriesMeasurement, period, this);
 		tTask.execute();
 	}
 
@@ -168,10 +219,12 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 		private final byte noTransfer = 0;
 		private final boolean seriesMeasurement;
 		private final int period;
+		private final Ntag_I2C_Jobs listener;
 
-		public TemperatureReadTask(boolean seriesMeasurement, int period){
+		public TemperatureReadTask(boolean seriesMeasurement, int period, Ntag_I2C_Jobs ntag_i2C_jobs){
 			this.seriesMeasurement = seriesMeasurement;
 			this.period = period;
+			this.listener = ntag_i2C_jobs;
 		}
 
 		@Override
@@ -418,9 +471,11 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 					String dateTag = dateFormatForEEPROM.format(date);
 					if(!seriesMeasurement){
 						try {
-							increaseCountRecord();
-							//writeNewIdRecord(dateTag);
-							appendIdDataToRecord(dateTag);
+							NdefRecord[] records = reader.readNDEF().getRecords();
+							records = appendMetadataToRecord(records,dateTag);
+							List<NdefRecord> listWithIncreasedCount = increaseCountRecord(records,1);
+							NdefMessage newMessage = new NdefMessage((NdefRecord[]) listWithIncreasedCount.toArray());
+							reader.writeNDEF(newMessage, listener);
 						} catch (IOException e) {
 							e.printStackTrace();
 						} catch (CommandNotSupportedException e) {
@@ -627,10 +682,9 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 	}
 
 	@RequiresApi(api = Build.VERSION_CODES.N)
-	private void appendIdDataToRecord(String timestamp) throws CommandNotSupportedException, FormatException, IOException {
+	private NdefRecord[] appendMetadataToRecord(NdefRecord[] recordsArray, String timestamp) throws CommandNotSupportedException, FormatException, IOException {
 		String mac = MainActivity.getMacAddr();
-		NdefMessage message = reader.readNDEF();
-		List<NdefRecord> records = Arrays.asList(message.getRecords());
+		List<NdefRecord> records = Arrays.asList(recordsArray);
 		Optional<NdefRecord> optIdRecord = records.stream().filter(record -> record.getId().length != 0 && new String(record.getId()).equals(RecordId.MD.toString())).findFirst();
 		if(optIdRecord.isPresent()){
 			NdefRecord idRecord = optIdRecord.get();
@@ -638,30 +692,26 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 			byte[] oldPayload = idRecord.getPayload();
 			byte[] payloadToAppend = NtagUtil.getMetadataRecordPayloadBytes(mac,timestamp);
 			records.set(index, NtagUtil.appendNewMetadataPayload(oldPayload,payloadToAppend));
-			NdefMessage newMessage = new NdefMessage((NdefRecord[]) records.toArray());
-			reader.writeNDEF(newMessage,this);
+			return (NdefRecord[]) records.toArray();
 		}
 		else{
 			byte[] payload = NtagUtil.getMetadataRecordPayloadBytes(mac,timestamp);
 			NdefRecord newRecord = NtagUtil.createNewRecord(RecordId.MD.toString(), payload);
-			NdefRecord[] newRecords = new NdefRecord[message.getRecords().length + 1];
-			System.arraycopy(message.getRecords(),0,newRecords,0,message.getRecords().length);
+			NdefRecord[] newRecords = new NdefRecord[recordsArray.length + 1];
+			System.arraycopy(recordsArray,0,newRecords,0,recordsArray.length);
 			newRecords[newRecords.length - 1] = newRecord;
-			NdefMessage newMessage = new NdefMessage(newRecords);
-			reader.writeNDEF(newMessage,this);
+			return newRecords;
 		}
 	}
 
 	@RequiresApi(api = Build.VERSION_CODES.N)
-	private void increaseCountRecord() throws CommandNotSupportedException, FormatException, IOException {
-		NdefMessage message = reader.readNDEF();
-		NdefRecord[] records = message.getRecords();
+	private List<NdefRecord> increaseCountRecord(NdefRecord[] records, int amount) throws CommandNotSupportedException, FormatException, IOException { ;
 		List<NdefRecord> recordsAsList = Arrays.asList(records);
 		Optional<NdefRecord> countRecordOpt = recordsAsList.stream()
 				.filter(record -> new String(record.getId()).equals(RecordId.CT.toString()))
 				.findFirst();
 		if(!countRecordOpt.isPresent()){
-			return;
+			return null;
 		}
 		NdefRecord countRecord = countRecordOpt.get();
 		String countAsHex = "";
@@ -670,13 +720,12 @@ public class Ntag_I2C_Jobs implements WriteEEPROMListener {
 			Integer integer = Integer.parseInt(currentByte.toString());
 			countAsHex = countAsHex.concat(Integer.toHexString(integer));
 		}
-		Integer newCountAsInt = Integer.parseInt(countAsHex,16) + 1;
+		Integer newCountAsInt = Integer.parseInt(countAsHex,16) + amount;
 		String newHexString = Integer.toHexString(newCountAsInt);
 		String newHexStringWithPadding = String.format("%8s", newHexString).replace(' ', '0');
 		byte[] newPayloadForRecord = NtagUtil.convertHexStringToByteArray(newHexStringWithPadding);
 		NdefRecord updatedRecord = NtagUtil.createNewRecord(RecordId.CT.toString(), newPayloadForRecord);
 		recordsAsList.set(recordsAsList.indexOf(countRecord),updatedRecord);
-		NdefMessage updatedMessage = new NdefMessage((NdefRecord[]) recordsAsList.toArray());
-		reader.writeNDEF(updatedMessage, this);
+		return recordsAsList;
 	}
 }
