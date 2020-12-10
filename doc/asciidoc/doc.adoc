@@ -29,6 +29,9 @@ If a tag gets discovered, the application reads out the md-Record of the NDEF me
 ==== 1.1.5 GetPassActivity
 This activity is called if the user submits the dialog of the AuthDialogFragment. It starts the GetPassIdTask to get the hashed password from the tag memory and compare it to the inserted one.
 
+==== 1.1.5 AddSeriesActivity
+This activity handles the saving of temperature data that has been measured during a series session. It gets called if the user taps on the save button of the TemperatureSeriesFragment.
+
 === 1.2 fragments
 ==== 1.2.1 ListFragment 
 The list fragment lists all temperatures that have been measured. Additionally, it shows a timestamp for each measurement.
