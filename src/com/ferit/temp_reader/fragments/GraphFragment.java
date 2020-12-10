@@ -69,7 +69,7 @@ public class GraphFragment extends Fragment {
         graph.getGridLabelRenderer().setHorizontalAxisTitle("measurements");
         graph.getViewport().setMinX(0);
         graph.getViewport().setMaxX(measuredTemperatures.size());
-        graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
+        graph.getGridLabelRenderer().setNumHorizontalLabels((measuredTemperatures.size() % 7) + 1);
         graph.getViewport().setXAxisBoundsManual(true);
         return v;
     }
@@ -99,7 +99,7 @@ public class GraphFragment extends Fragment {
         }
         else{
             graph.getViewport().setMaxX(measuredTemperatures.size());
-            graph.getGridLabelRenderer().setNumHorizontalLabels(measuredTemperatures.size()+1);
+            graph.getGridLabelRenderer().setNumHorizontalLabels((measuredTemperatures.size() % 7) + 1);
             series.appendData(convertToDataPoint(tempAsNumber), false, measuredTemperatures.size());
         }
         graph.onDataChanged(false,true);
