@@ -15,4 +15,10 @@ Therfore: menu -> Reset temperatures and memory
 
 This only needs to be done once during the first usage.
 
+### Links
+[Documentation](https://github.com/morpfl/ferit-nfc-nxp/blob/master/doc/asciidoc/doc.adoc)
+
+[Device specifications](https://www.nxp.com/products/rfid-nfc/nfc-hf/nfc-tags-for-electronics/ntag-ic-iplus-i-nfc-forum-type-2-tag-with-ic-interface:NTAG_I2C)
+
+
 
