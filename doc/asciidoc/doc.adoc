@@ -60,7 +60,7 @@ The Ntag memory stores metadata relating to the measurements. To access the memo
 Additional to the three TXT-Records the tag contains one AAR-Record that hasn't an id. It contains the package name to ensure that the app will be started if a tag has been detected.
 
 ==== 2.1.2 memory management
-In order to store as much metadata on the tag as possible, the following determinations has been made:
+In order to store as much metadata on the tag as possible, the following determinations have been made:
 
 |===
 |Record |Bytes ID | Bytes Payload | total
